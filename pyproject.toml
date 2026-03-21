@@ -1,0 +1,4 @@
+[project]
+name = "arcadechess"
+version = "0.0"
+dependencies = ["arcade"]
