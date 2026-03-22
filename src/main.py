@@ -1,6 +1,5 @@
 import arcade
 import sys
-from gamestate.normal_chess.main import NormalChessMainView
 from gamestate.normal_chess.online import NormalChessOnlineView
 from constants import *
 from piece.type import PieceColor
