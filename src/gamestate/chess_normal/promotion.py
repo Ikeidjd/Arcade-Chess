@@ -1,16 +1,17 @@
 import arcade
 from constants import PIECE_SIZE, BOARD_SIZE, SCREEN_SIZE
-from gamestate.normal_chess.main import NormalChessMainView
-from gamestate.normal_chess.move_packet import MovePacket
+from gamestate.chess_normal.main import ChessNormalMainView
+from gamestate.chess_normal.move_packet import MovePacket
 from piece.piece import Piece
 from piece.type import PieceType, PieceColor, PiecePos
 
 
-class NormalChessPromotionView(arcade.View):
-    def __init__(self, main_view: NormalChessMainView, piece_color: PieceColor, piece_pos: PiecePos, forward_dir: PiecePos, move_packet: MovePacket) -> None:
+class ChessNormalPromotionView(arcade.View):
+    def __init__(self, prev_view: arcade.View, piece_color: PieceColor, piece_pos: PiecePos, forward_dir: PiecePos, move_packet: MovePacket) -> None:
         super().__init__()
+        assert(isinstance(prev_view, ChessNormalMainView))
 
-        self.prev_view: NormalChessMainView = main_view
+        self.prev_view: ChessNormalMainView = prev_view
         self.board = self.prev_view.board
         self.piece_pos: PiecePos = piece_pos
         self.forward_dir: PiecePos = forward_dir

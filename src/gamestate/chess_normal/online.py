@@ -1,28 +1,36 @@
 from typing import Any
-from PodSixNet.Channel import Channel # type: ignore
-from PodSixNet.Server import Server # type: ignore
-from PodSixNet.Connection import ConnectionListener, connection # type: ignore
-from constants import SCREEN_SIZE
-from .main import NormalChessMainView
+from PodSixNet.Channel import Channel
+from PodSixNet.Server import Server
+from PodSixNet.Connection import ConnectionListener, connection
+from .main import ChessNormalMainView
 from .move_packet import MovePacket
 from piece.type import PieceType, PieceColor
 from piece.piece import Piece
 
 
 class ClientChannel(Channel):
-    def __init__(self, *args, **kwargs): # type: ignore
-        super().__init__(*args, **kwargs) # type: ignore
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._server: ServerChannel
+
+    def Network(self, data: dict[str, Any]) -> None:
+        print(f"Server received {data}")
+
+        if data["action"] != "move":
+            self._server.send_all(data)
 
     def Network_move(self, data: dict[str, Any]) -> None:
-        print(f"Server received {data}")
-        self._server.move(data) # type: ignore
+        self._server.move(data)
+
+    def Network_close(self, data: dict[str, Any]) -> None:
+        self._server.close_all(data)
 
 
 class ServerChannel(Server):
     channelClass = ClientChannel
 
-    def __init__(self, *args, **kwargs) -> None: # type: ignore
-        super().__init__(*args, **kwargs) # type: ignore
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
 
         self.white: ClientChannel | None = None
         self.black: ClientChannel | None = None
@@ -34,28 +42,56 @@ class ServerChannel(Server):
         else:
             self.black = channel
 
+            self.white.Send({"action": "start_game"})
+            self.black.Send({"action": "start_game"})
+
+    def send_all(self, data: dict[str, Any]) -> None:
+        assert(self.white)
+        assert(self.black)
+
+        self.white.Send(data)
+        self.black.Send(data)
+
     def move(self, data: dict[str, Any]) -> None:
         assert(self.white and self.black)
 
         if data["move"]["src_color"] == PieceColor.BLACK.value:
-            self.white.Send(data) # type: ignore
+            self.white.Send(data)
         else:
-            self.black.Send(data) # type: ignore
+            self.black.Send(data)
+
+    def close_all(self, data: dict[str, Any]) -> None:
+        assert(self.white)
+        assert(self.black)
+
+        self.white.close()
+        self.black.close()
+
+        self.white = None
+        self.black = None
+
+        self.close()
 
 
-class NormalChessOnlineView(NormalChessMainView, ConnectionListener):
-    def __init__(self, my_turn_color: PieceColor, is_host: bool, host, port) -> None: # type: ignore
-        NormalChessMainView.__init__(self)
+class ChessNormalOnlineView(ChessNormalMainView, ConnectionListener):
+    def __init__(self, my_turn_color: PieceColor, is_host: bool, host: str, port: int) -> None:
+        super().__init__(flip_perspective_on_turn_swap=False)
         self.board.inverted = my_turn_color == PieceColor.BLACK
 
         self.server: ServerChannel | None = ServerChannel(localaddr=(host, port)) if is_host else None
-        self.Connect((host, port)) # type: ignore
+        self.Connect((host, port))
+        self.host = host
+        self.port = port
 
         self.my_turn_color: PieceColor = my_turn_color
         self.move_packet: MovePacket | None = None
 
         self.enemy_pieces_moving: list[Piece] = []
         self.enemy_promotion_piece: tuple[PieceType, PieceColor] | None = None
+
+        self.start_game = False
+
+        self.data: dict[str, Any] | None = None
 
     def is_my_turn(self):
         return self.cur_turn_color == self.my_turn_color
@@ -67,13 +103,16 @@ class NormalChessOnlineView(NormalChessMainView, ConnectionListener):
         if self.server:
             self.server.Pump()
 
+        if not self.start_game:
+            return
+
         if self.is_my_turn():
             if self.selected and self.selected.just_finished_moving:
-                connection.Send({ # type: ignore
+                connection.Send({
                     "action": "move",
                     "move": self.selected.move_packet.to_dict()
                 })
-            NormalChessMainView.on_update(self, delta_time)
+            ChessNormalMainView.on_update(self, delta_time)
         elif len(self.enemy_pieces_moving) > 0:
             done = True
 
@@ -106,6 +145,10 @@ class NormalChessOnlineView(NormalChessMainView, ConnectionListener):
             self.last_move = self.move_packet.start[0], self.move_packet.end[0]
             self.move_packet = None
 
+    def on_draw(self) -> None:
+        if self.start_game:
+            super().on_draw()
+
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
         if self.is_my_turn():
             super().on_mouse_press(x, y, button, modifiers)
@@ -114,12 +157,15 @@ class NormalChessOnlineView(NormalChessMainView, ConnectionListener):
         if self.is_my_turn():
             super().on_mouse_release(x, y, button, modifiers)
 
-    def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
-        super().on_mouse_motion(x, y, dx, dy)
+    def on_hide_view(self) -> None:
+        connection.Send({"action": "close"})
+        connection.close()
 
-        if self.board.inverted:
-            self.mouse_x, self.mouse_y = SCREEN_SIZE - self.mouse_x, SCREEN_SIZE - self.mouse_y
-
-    def Network_move(self, data: dict[str, Any]):
+    def Network(self, data: dict[str, Any]) -> None:
         print(f"Client received {data}")
+
+    def Network_move(self, data: dict[str, Any]) -> None:
         self.move_packet = MovePacket.from_dict(data["move"])
+
+    def Network_start_game(self, data: dict[str, Any]) -> None:
+        self.start_game = True

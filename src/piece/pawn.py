@@ -72,9 +72,10 @@ class Pawn(Piece):
         super().end_move_transition(view_manager)
 
         if self.is_promotion:
-            from gamestate.normal_chess.promotion import NormalChessPromotionView
+            from gamestate.chess_normal.promotion import ChessNormalPromotionView
             self.remove_from_sprite_lists()
-            view_manager.show_view(NormalChessPromotionView(view_manager.current_view, self.piece_color, self.piece_pos, self.forward_dir, self.move_packet)) # type: ignore
+            assert(view_manager.current_view)
+            view_manager.show_view(ChessNormalPromotionView(view_manager.current_view, self.piece_color, self.piece_pos, self.forward_dir, self.move_packet))
 
     def draw_as_selected(self) -> None:
         if self.en_passant_capture:

@@ -1,26 +1,29 @@
 import arcade
+from constants import SCREEN_SIZE
 from board import Board
 from piece.piece import Piece, PieceColor, PiecePos
 
 
-class NormalChessMainView(arcade.View):
+class ChessNormalMainView(arcade.View):
+    initial_board: list[list[str]] = [
+        ["RB", "NB", "BB", "QB", "KB", "BB", "NB", "RB"],
+        ["PB", "PB", "PB", "PB", "PB", "PB", "PB", "PB"],
+        ["", "", "", "", "", "", "", ""],
+        ["", "", "", "", "", "", "", ""],
+        ["", "", "", "", "", "", "", ""],
+        ["", "", "", "", "", "", "", ""],
+        ["PW", "PW", "PW", "PW", "PW", "PW", "PW", "PW"],
+        ["RW", "NW", "BW", "QW", "KW", "BW", "NW", "RW"]
+    ]
+
     move_tile_colors = [arcade.types.Color(255, 255, 0, 128), arcade.types.Color(255, 255, 0, 160)]
 
-    def __init__(self) -> None:
+    def __init__(self, initial_board: list[list[str]] | None = None, /, flip_perspective_on_turn_swap: bool = True) -> None:
         super().__init__()
 
-        board = [
-            ["RB", "NB", "BB", "QB", "KB", "BB", "NB", "RB"],
-            ["PB", "PB", "PB", "PB", "PB", "PB", "PB", "PB"],
-            ["", "", "", "", "", "", "", ""],
-            ["", "", "", "", "", "", "", ""],
-            ["", "", "", "", "", "", "", ""],
-            ["", "", "", "", "", "", "", ""],
-            ["PW", "PW", "PW", "PW", "PW", "PW", "PW", "PW"],
-            ["RW", "NW", "BW", "QW", "KW", "BW", "NW", "RW"]
-        ]
+        self.flip_perspective_on_turn_swap = flip_perspective_on_turn_swap
 
-        self.board: Board[Piece] = Board(board)
+        self.board: Board[Piece] = Board(self.initial_board if initial_board is None else initial_board)
         self.last_move: tuple[PiecePos, PiecePos] | None = None
         self.cur_turn_color: PieceColor = PieceColor.WHITE
 
@@ -62,9 +65,9 @@ class NormalChessMainView(arcade.View):
             self.selected.reset_pos()
 
     def gen_moves(self) -> None:
-        for piece in self.board.pieces: # type: ignore
-            if piece.has_color(self.cur_turn_color): # type: ignore
-                piece.gen_moves(self.future_en_passant_pos, self.can_castle_kingside[self.cur_turn_color], self.can_castle_queenside[self.cur_turn_color]) # type: ignore
+        for piece in self.board.pieces:
+            if piece.has_color(self.cur_turn_color):
+                piece.gen_moves(self.future_en_passant_pos, self.can_castle_kingside[self.cur_turn_color], self.can_castle_queenside[self.cur_turn_color])
 
     def on_draw(self) -> None:
         self.board.draw_background()
@@ -93,6 +96,9 @@ class NormalChessMainView(arcade.View):
     def swap_turn(self) -> None:
         self.cur_turn_color = PieceColor.WHITE if self.cur_turn_color == PieceColor.BLACK else PieceColor.BLACK
 
+        if self.flip_perspective_on_turn_swap:
+            self.board.inverted = not self.board.inverted
+
     def on_mouse_release(self, x: int, y: int, button: int, modifiers: int) -> None:
         if button != arcade.MOUSE_BUTTON_LEFT or not self.selected or self.selected.moving:
             return
@@ -119,3 +125,6 @@ class NormalChessMainView(arcade.View):
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
         self.mouse_x = x + dx
         self.mouse_y = y + dy
+
+        if self.board.inverted:
+            self.mouse_x, self.mouse_y = SCREEN_SIZE - self.mouse_x, SCREEN_SIZE - self.mouse_y

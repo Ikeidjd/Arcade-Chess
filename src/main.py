@@ -1,21 +1,13 @@
 import arcade
-import sys
-from gamestate.normal_chess.online import NormalChessOnlineView
-from constants import *
-from piece.type import PieceColor
+from gamestate.menu.main import MenuMainView
+from constants import SCREEN_SIZE
 
 
 class ViewManager(arcade.Window):
     def __init__(self) -> None:
         super().__init__(SCREEN_SIZE, SCREEN_SIZE)
 
-        if len(sys.argv) == 1:
-            color = PieceColor.WHITE
-            is_host = True
-        else:
-            color = PieceColor.BLACK
-            is_host = False
-        view = NormalChessOnlineView(color, is_host, "localhost", 1234)
+        view = MenuMainView()
         self.show_view(view)
 
         arcade.run()

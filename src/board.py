@@ -11,17 +11,22 @@ class Board(Generic[T]):
     def __init__(self, board: list[list[str]], /, inverted: bool = False) -> None:
         from piece.piece import Piece
 
-        self.board: list[list[T | None]] = []
+        self.data: list[list[T | None]] = []
         self.pieces: arcade.SpriteList[Piece] = arcade.SpriteList() # type: ignore
         self.inverted = inverted
+        self.fill(board)
+
+    def fill(self, board: list[list[str]]) -> None:
+        self.data.clear()
+        self.pieces.clear()
 
         for rank, row in enumerate(reversed(board)):
-            self.board.append([])
+            self.data.append([])
             for file, name in enumerate(row):
                 if name == "":
-                    self.board[-1].append(None)
+                    self.data[-1].append(None)
                 else:
-                    self.board[-1].append(self.new_piece_of_name(name, PiecePos(rank, file), add_to_board=False))
+                    self.data[-1].append(self.new_piece_of_name(name, PiecePos(rank, file), add_to_board=False))
 
     def new_piece_of_name(self, name: str, piece_pos: PiecePos, /, add_to_board: bool = True, append_to_sprite_list: bool = True) -> T:
         piece_type = piece_type_from_str[name[0]]
@@ -88,10 +93,10 @@ class Board(Generic[T]):
                 piece.center_x, piece.center_y = SCREEN_SIZE - piece.center_x, SCREEN_SIZE - piece.center_y
 
     def __getitem__(self, key: PiecePos) -> T | None:
-        return self.board[key.rank][key.file]
+        return self.data[key.rank][key.file]
 
     def __setitem__(self, key: PiecePos, value: T | None):
-        self.board[key.rank][key.file] = value
+        self.data[key.rank][key.file] = value
 
     def to_piece_pos(self, x: int, y: int) -> PiecePos:
         if self.inverted:

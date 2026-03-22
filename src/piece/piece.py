@@ -1,6 +1,6 @@
 import arcade
 from constants import *
-from gamestate.normal_chess.move_packet import MovePacket
+from gamestate.chess_normal.move_packet import MovePacket
 from .type import *
 from board import Board
 
