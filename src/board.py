@@ -99,6 +99,12 @@ class Board(Generic[T]):
 
         return PiecePos(int(y // PIECE_SIZE), int(x // PIECE_SIZE))
 
+    def color_tile(self, pos: PiecePos, color: arcade.types.Color) -> None:
+        if self.inverted:
+            pos = PiecePos(BOARD_SIZE - 1, BOARD_SIZE - 1) - pos
+
+        arcade.draw_lbwh_rectangle_filled(pos.file * PIECE_SIZE, pos.rank * PIECE_SIZE, PIECE_SIZE, PIECE_SIZE, color)
+
     @staticmethod
     def is_in_bounds(pos: PiecePos) -> bool:
         return 0 <= pos.rank < BOARD_SIZE and 0 <= pos.file < BOARD_SIZE

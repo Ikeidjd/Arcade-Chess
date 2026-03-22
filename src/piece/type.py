@@ -26,6 +26,9 @@ class PiecePos:
     def __sub__(self, other: "PiecePos") -> "PiecePos":
         return PiecePos(self.rank - other.rank, self.file - other.file)
 
+    def __neg__(self) -> "PiecePos":
+        return PiecePos(-self.rank, -self.file)
+
     def __mul__(self, num: int) -> "PiecePos":
         return PiecePos(self.rank * num, self.file * num)
 

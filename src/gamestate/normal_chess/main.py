@@ -1,5 +1,4 @@
 import arcade
-from constants import PIECE_SIZE
 from board import Board
 from piece.piece import Piece, PieceColor, PiecePos
 
@@ -71,12 +70,12 @@ class NormalChessMainView(arcade.View):
         self.board.draw_background()
 
         if self.selected:
-            arcade.draw_lbwh_rectangle_filled(self.selected.piece_pos.file * PIECE_SIZE, self.selected.piece_pos.rank * PIECE_SIZE, PIECE_SIZE, PIECE_SIZE, self.move_tile_colors[0])
+            self.board.color_tile(self.selected.piece_pos, self.move_tile_colors[0])
             self.selected.draw_as_selected()
 
         if self.last_move:
-            arcade.draw_lbwh_rectangle_filled(self.last_move[0].file * PIECE_SIZE, self.last_move[0].rank * PIECE_SIZE, PIECE_SIZE, PIECE_SIZE, self.move_tile_colors[0])
-            arcade.draw_lbwh_rectangle_filled(self.last_move[1].file * PIECE_SIZE, self.last_move[1].rank * PIECE_SIZE, PIECE_SIZE, PIECE_SIZE, self.move_tile_colors[1])
+            self.board.color_tile(self.last_move[0], self.move_tile_colors[0])
+            self.board.color_tile(self.last_move[1], self.move_tile_colors[1])
 
         self.board.draw_pieces()
 

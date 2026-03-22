@@ -1,5 +1,5 @@
 import arcade
-from constants import PIECE_SIZE
+from constants import PIECE_SIZE, BOARD_SIZE, SCREEN_SIZE
 from gamestate.normal_chess.main import NormalChessMainView
 from gamestate.normal_chess.move_packet import MovePacket
 from piece.piece import Piece
@@ -26,14 +26,30 @@ class NormalChessPromotionView(arcade.View):
         self.clear()
         self.board.draw_everything()
 
-        pos = self.piece_pos - self.forward_dir * (len(self.options) - 1)
-        if self.piece_pos.rank < pos.rank:
-            pos.rank = self.piece_pos.rank
+        piece_pos = self.piece_pos
+        forward_dir = self.forward_dir
+
+        if self.board.inverted:
+            piece_pos = PiecePos(BOARD_SIZE - 1, BOARD_SIZE - 1) - piece_pos
+            forward_dir = -forward_dir
+
+        pos = piece_pos - forward_dir * (len(self.options) - 1)
+
+        if piece_pos.rank < pos.rank:
+            pos = piece_pos
 
         arcade.draw_lbwh_rectangle_filled(pos.file * PIECE_SIZE, pos.rank * PIECE_SIZE, PIECE_SIZE, len(self.options) * PIECE_SIZE, arcade.color.BLACK)
         arcade.draw_lbwh_rectangle_filled((pos.file + 0.05) * PIECE_SIZE, (pos.rank + 0.05) * PIECE_SIZE, 0.9 * PIECE_SIZE, (len(self.options) - 0.1) * PIECE_SIZE, arcade.color.WHITE)
 
+        if self.board.inverted:
+            for option in self.options:
+                option.center_x, option.center_y = SCREEN_SIZE - option.center_x, SCREEN_SIZE - option.center_y
+
         self.options.draw(pixelated=True)
+
+        if self.board.inverted:
+            for option in self.options:
+                option.center_x, option.center_y = SCREEN_SIZE - option.center_x, SCREEN_SIZE - option.center_y
 
     def on_mouse_release(self, x: int, y: int, button: int, modifiers: int) -> None:
         if not button == arcade.MOUSE_BUTTON_LEFT:
