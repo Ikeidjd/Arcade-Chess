@@ -1,15 +1,16 @@
 from .type import PieceType, PieceColor, PiecePos
 from .piece import Piece
+from board import Board
 
 
 class LoopingMovePiece(Piece):
-    def __init__(self, piece_type: PieceType, piece_color: PieceColor, piece_pos: PiecePos, dirs: set[PiecePos]) -> None:
-        super().__init__(piece_type, piece_color, piece_pos, dirs)
+    def __init__(self, piece_type: PieceType, piece_color: PieceColor, piece_pos: PiecePos, board: Board[Piece], dirs: set[PiecePos]) -> None:
+        super().__init__(piece_type, piece_color, piece_pos, board, dirs)
 
-    def gen_moves(self, board: list[list[Piece | None]], en_passant: tuple[PiecePos, PieceColor] | None, can_castle_kingside: bool, can_castle_queenside: bool) -> None:
-        super().gen_moves(board, en_passant, can_castle_kingside, can_castle_queenside)
+    def gen_moves(self, possible_en_passant_pos: PiecePos | None, can_castle_kingside: bool, can_castle_queenside: bool) -> None:
+        super().gen_moves(possible_en_passant_pos, can_castle_kingside, can_castle_queenside)
 
         for dir in self.dirs:
             pos = self.piece_pos
-            while self.try_add_move(board, pos, dir):
+            while self.try_add_move(pos, dir):
                 pos += dir

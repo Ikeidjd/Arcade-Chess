@@ -1,37 +1,32 @@
 import arcade
-from board import Board
+import sys
+from gamestate.normal_chess.main import NormalChessMainView
+from gamestate.normal_chess.online import NormalChessOnlineView
 from constants import *
+from piece.type import PieceColor
 
 
-class Juego(arcade.Window):
+class ViewManager(arcade.Window):
     def __init__(self) -> None:
         super().__init__(SCREEN_SIZE, SCREEN_SIZE)
 
-        self.board = Board()
-        self.mouse_x = self.mouse_y = 0
+        if len(sys.argv) == 1:
+            color = PieceColor.WHITE
+            is_host = True
+        else:
+            color = PieceColor.BLACK
+            is_host = False
+        view = NormalChessOnlineView(color, is_host, "localhost", 1234)
+        self.show_view(view)
 
-    def on_update(self, delta_time: float) -> None:
-        self.board.update(delta_time, self.mouse_x, self.mouse_y)
+        arcade.run()
 
-    def on_draw(self) -> None:
-        self.board.draw()
-
-    def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
-        if button == arcade.MOUSE_BUTTON_LEFT:
-            self.board.on_left_click_press(x, y)
-
-    def on_mouse_release(self, x: int, y: int, button: int, modifiers: int) -> None:
-        if button == arcade.MOUSE_BUTTON_LEFT:
-            self.board.on_left_click_release(x, y)
-
-    def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
-        self.mouse_x = x + dx
-        self.mouse_y = y + dy
+    def on_update(self, delta_time: float) -> bool | None:
+        return super().on_update(delta_time)
 
 
 def main():
-    juego = Juego()
-    juego.run()
+    ViewManager()
 
 
 if __name__ == "__main__":

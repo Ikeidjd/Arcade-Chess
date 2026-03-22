@@ -1,26 +1,19 @@
 import arcade
-from constants import *
-import piece.factory
-from piece.piece import Piece, PieceColor, PiecePos
+from typing import TypeVar, Generic
+from constants import PIECE_SIZE, BOARD_SIZE, SCREEN_SIZE
+from piece.type import *
 
 
-class Board:
-    def __init__(self) -> None:
-        board = [
-            ["RB", "NB", "BB", "QB", "KB", "BB", "NB", "RB"],
-            ["PB", "PB", "PB", "PB", "PB", "PB", "PB", "PB"],
-            ["", "", "", "", "", "", "", ""],
-            ["", "", "", "", "", "", "", ""],
-            ["", "", "", "", "", "", "", ""],
-            ["", "", "", "", "", "", "", ""],
-            ["PW", "PW", "PW", "PW", "PW", "PW", "PW", "PW"],
-            ["RW", "NW", "BW", "QW", "KW", "BW", "NW", "RW"]
-        ]
+T = TypeVar('T')
+class Board(Generic[T]):
+    tile_colors = [arcade.color.DARK_MOSS_GREEN, arcade.color.FLORAL_WHITE]
 
-        board = [list(row) for row in board]
+    def __init__(self, board: list[list[str]], /, inverted: bool = False) -> None:
+        from piece.piece import Piece
 
-        self.pieces: arcade.SpriteList[Piece] = arcade.SpriteList()
-        self.board: list[list[Piece | None]] = []
+        self.board: list[list[T | None]] = []
+        self.pieces: arcade.SpriteList[Piece] = arcade.SpriteList() # type: ignore
+        self.inverted = inverted
 
         for rank, row in enumerate(reversed(board)):
             self.board.append([])
@@ -28,102 +21,84 @@ class Board:
                 if name == "":
                     self.board[-1].append(None)
                 else:
-                    next_piece = piece.factory.new(name, PiecePos(rank, file))
-                    self.pieces.append(next_piece)
-                    self.board[-1].append(next_piece)
+                    self.board[-1].append(self.new_piece_of_name(name, PiecePos(rank, file), add_to_board=False))
 
-        self.turn_color: PieceColor = PieceColor.WHITE
-        self.future_en_passant: tuple[PiecePos, PieceColor] | None = None
+    def new_piece_of_name(self, name: str, piece_pos: PiecePos, /, add_to_board: bool = True, append_to_sprite_list: bool = True) -> T:
+        piece_type = piece_type_from_str[name[0]]
+        piece_color = piece_color_from_str[name[1]]
+        return self.new_piece_of_type(piece_type, piece_color, piece_pos, add_to_board=add_to_board, append_to_sprite_list=append_to_sprite_list)
 
-        self.can_castle_kingside: dict[PieceColor, bool] = {
-            PieceColor.WHITE: True,
-            PieceColor.BLACK: True
-        }
+    def new_piece_of_type(self, piece_type: PieceType, piece_color: PieceColor, piece_pos: PiecePos, /, add_to_board: bool = True, append_to_sprite_list: bool = True) -> T:
+        from piece.pawn import Pawn
+        from piece.single_move_piece import SingleMovePiece
+        from piece.looping_move_piece import LoopingMovePiece
+        from piece.rook import Rook
+        from piece.king import King
 
-        self.can_castle_queenside: dict[PieceColor, bool] = {
-            PieceColor.WHITE: True,
-            PieceColor.BLACK: True
-        }
+        match piece_type:
+            case PieceType.PAWN:
+                piece = Pawn(piece_color, piece_pos, self) # type: ignore
+            case PieceType.KNIGHT:
+                piece = SingleMovePiece(piece_type, piece_color, piece_pos, self, {PiecePos(1, 2)}) # type: ignore
+            case PieceType.BISHOP:
+                piece = LoopingMovePiece(piece_type, piece_color, piece_pos, self, {PiecePos(1, 1)}) # type: ignore
+            case PieceType.ROOK:
+                piece = Rook(piece_color, piece_pos, self) # type: ignore
+            case PieceType.QUEEN:
+                piece = LoopingMovePiece(piece_type, piece_color, piece_pos, self, {PiecePos(0, 1), PiecePos(1, 1)}) # type: ignore
+            case PieceType.KING:
+                piece = King(piece_color, piece_pos, self) # type: ignore
 
-        self.selected_rank: int = 0
-        self.selected_file: int = 0
-        self.selected: Piece | None = None
-        self.just_selected: bool = False
+        if add_to_board:
+            self[piece.piece_pos] = piece # type: ignore
 
-        self.gen_moves()
+        if append_to_sprite_list:
+            self.pieces.append(piece)
 
-    def update(self, delta_time: float, mouse_x: int, mouse_y: int):
-        if not self.selected:
-            return
+        return piece # type: ignore
 
-        if self.selected.moving:
-            self.selected.advance_move_transition(delta_time)
-        elif self.selected.just_finished_moving:
-            self.selected.end_move_transition()
-            self.selected = None
-            self.gen_moves()
-        elif self.just_selected:
-            self.selected.center_x, self.selected.center_y = mouse_x, mouse_y
-        else:
-            self.selected.reset_pos()
-            
+    def add_piece(self, piece: T) -> None:
+        piece.reset_pos() # type: ignore
+        self[piece.piece_pos] = piece # type: ignore
+        self.pieces.append(piece) # type: ignore
 
-    def draw(self):
-        colors = [arcade.color.DARK_MOSS_GREEN, arcade.color.FLORAL_WHITE]
+    def kill_piece(self, pos: PiecePos) -> None:
+        assert(victim := self[pos])
+        victim.remove_from_sprite_lists() # type: ignore
+        self[pos] = None
 
+    def draw_everything(self) -> None:
+        self.draw_background()
+        self.draw_pieces()
+
+    def draw_background(self) -> None:
         for rank in range(BOARD_SIZE):
             for file in range(BOARD_SIZE):
-                arcade.draw_lbwh_rectangle_filled(file * PIECE_SIZE, rank * PIECE_SIZE, PIECE_SIZE, PIECE_SIZE, colors[(rank + file) % 2])
-                if self.selected and rank == self.selected_rank and file == self.selected_file:
-                    arcade.draw_lbwh_rectangle_filled(file * PIECE_SIZE, rank * PIECE_SIZE, PIECE_SIZE, PIECE_SIZE, (255, 255, 0, 128))
+                arcade.draw_lbwh_rectangle_filled(file * PIECE_SIZE, rank * PIECE_SIZE, PIECE_SIZE, PIECE_SIZE, self.tile_colors[(rank + file) % 2])
+
+    def draw_pieces(self) -> None:
+        if self.inverted:
+            for piece in self.pieces:
+                piece.center_x, piece.center_y = SCREEN_SIZE - piece.center_x, SCREEN_SIZE - piece.center_y
 
         self.pieces.draw(pixelated=True)
 
-        if self.selected:
-            self.selected.draw_as_selected()
+        if self.inverted:
+            for piece in self.pieces:
+                piece.center_x, piece.center_y = SCREEN_SIZE - piece.center_x, SCREEN_SIZE - piece.center_y
 
-    def gen_moves(self) -> None:
-        for piece in self.pieces:
-            if piece.has_color(self.turn_color):
-                piece.gen_moves(self.board, self.future_en_passant, self.can_castle_kingside[self.turn_color], self.can_castle_queenside[self.turn_color])
+    def __getitem__(self, key: PiecePos) -> T | None:
+        return self.board[key.rank][key.file]
 
-    def on_left_click_press(self, x: int, y: int) -> None:
-        if self.selected and self.selected.moving:
-            return
+    def __setitem__(self, key: PiecePos, value: T | None):
+        self.board[key.rank][key.file] = value
 
-        rank, file = self.to_rank_file(x, y)
+    def to_piece_pos(self, x: int, y: int) -> PiecePos:
+        if self.inverted:
+            x, y = SCREEN_SIZE - x, SCREEN_SIZE - y
 
-        if self.is_in_bounds(rank, file) and (piece := self.board[rank][file]) and piece.has_color(self.turn_color):
-            self.selected_rank, self.selected_file = rank, file
-            self.selected = piece
-            self.just_selected = True
-
-    def on_left_click_release(self, x: int, y: int) -> None:
-        if not self.selected or self.selected.moving:
-            return
-
-        move = PiecePos(*self.to_rank_file(x, y))
-        move_result = self.selected.try_move(self.board, move)
-
-        if move_result.did_move:
-            self.future_en_passant = move_result.future_en_passant
-
-            if move_result.disable_kingside_castle:
-                self.can_castle_kingside[self.turn_color] = False
-
-            if move_result.disable_queenside_castle:
-                self.can_castle_queenside[self.turn_color] = False
-
-            self.turn_color = PieceColor.WHITE if self.turn_color == PieceColor.BLACK else PieceColor.BLACK
-        elif not self.just_selected:
-            self.selected.reset_pos()
-            self.selected = None
-
-        self.just_selected = False
-
-    def is_in_bounds(self, rank: int, file: int) -> bool:
-        return 0 <= rank < BOARD_SIZE and 0 <= file < BOARD_SIZE
+        return PiecePos(int(y // PIECE_SIZE), int(x // PIECE_SIZE))
 
     @staticmethod
-    def to_rank_file(x: int, y: int) -> tuple[int, int]:
-        return int(y // PIECE_SIZE), int(x // PIECE_SIZE)
+    def is_in_bounds(pos: PiecePos) -> bool:
+        return 0 <= pos.rank < BOARD_SIZE and 0 <= pos.file < BOARD_SIZE

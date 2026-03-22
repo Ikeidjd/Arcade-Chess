@@ -1,12 +1,14 @@
 import arcade
 from constants import *
+from gamestate.normal_chess.move_packet import MovePacket
 from .type import *
+from board import Board
 
 
 class Piece(arcade.Sprite):
     move_transition_length_in_seconds = 0.125
 
-    def __init__(self, piece_type: PieceType, piece_color: PieceColor, piece_pos: PiecePos, dirs: set[PiecePos] | None = None, /, symmetric_dirs: bool = True) -> None:
+    def __init__(self, piece_type: PieceType, piece_color: PieceColor, piece_pos: PiecePos, board: Board["Piece"], dirs: set[PiecePos] | None = None, /, symmetric_dirs: bool = True) -> None:
         self.piece_type: PieceType = piece_type
         self.piece_color: PieceColor = piece_color
         self.piece_pos: PiecePos = piece_pos
@@ -22,8 +24,12 @@ class Piece(arcade.Sprite):
         if symmetric_dirs:
             self.make_dirs_symmetric()
 
+        self.board = board
+
         self.moves: set[PiecePos] = set()
         self.captures: set[PiecePos] = set()
+
+        self.move_packet = MovePacket(self.piece_color)
 
         self.moving: bool = False
         self.just_finished_moving: bool = False
@@ -47,10 +53,10 @@ class Piece(arcade.Sprite):
         self.dirs = dirs
 
     # Returns false if a move (not capture) was possible
-    def try_add_move(self, board: list[list["Piece | None"]], pos: PiecePos, dir: PiecePos, /, allow_move: bool = True, allow_capture: bool = True) -> bool:
+    def try_add_move(self, pos: PiecePos, dir: PiecePos, /, allow_move: bool = True, allow_capture: bool = True) -> bool:
         move = pos + dir
         try:
-            piece = board[move.rank][move.file]
+            piece = self.board[move]
         except IndexError:
             return False
         else:
@@ -65,40 +71,44 @@ class Piece(arcade.Sprite):
 
             return False
 
-    def gen_moves(self, board: list[list["Piece | None"]], en_passant: tuple[PiecePos, PieceColor] | None, can_castle_kingside: bool, can_castle_queenside: bool) -> None:
+    def gen_moves(self, possible_en_passant_pos: PiecePos | None, can_castle_kingside: bool, can_castle_queenside: bool) -> None:
         self.clear_moves()
+        self.move_packet = MovePacket(self.piece_color)
 
     def clear_moves(self) -> None:
         self.moves = set()
         self.captures = set()
 
     class MoveResult:
-        def __init__(self, did_move: bool, future_en_passant: tuple[PiecePos, PieceColor] | None = None, disable_kingside_castle: bool = False, disable_queenside_castle: bool = False) -> None:
+        def __init__(self, did_move: bool, future_en_passant_pos: PiecePos | None = None, disable_kingside_castle: bool = False, disable_queenside_castle: bool = False) -> None:
             self.did_move = did_move
-            self.future_en_passant = future_en_passant
+            self.future_en_passant_pos = future_en_passant_pos
             self.disable_kingside_castle = disable_kingside_castle
             self.disable_queenside_castle = disable_queenside_castle
 
-    def try_move(self, board: list[list["Piece | None"]], move: PiecePos) -> MoveResult:
+    def try_move(self, move: PiecePos) -> MoveResult:
         can_move = move in self.moves
         can_capture = move in self.captures
 
         if can_move or can_capture:
             if can_capture:
-                self.capture(board, move)
+                self.capture(move)
 
-            self.move(board, move)
+            self.move(move)
 
             return self.MoveResult(True)
 
         return self.MoveResult(False)
 
-    def move(self, board: list[list["Piece | None"]], move: PiecePos) -> None:
+    def move(self, move: PiecePos) -> None:
+        self.move_packet.start.append(self.piece_pos)
+        self.move_packet.end.append(move)
+
         old_center_x, old_center_y = self.center_x, self.center_y
         self.reset_pos()
 
-        board[move.rank][move.file] = self
-        board[self.piece_pos.rank][self.piece_pos.file] = None
+        self.board[move] = self
+        self.board[self.piece_pos] = None
 
         # Move transition is skipped if the piece was dragged to its target by the mouse
         self.start_move_transition(move, old_center_x != self.center_x or old_center_y != self.center_y)
@@ -115,25 +125,27 @@ class Piece(arcade.Sprite):
         if skip_move_transition:
             self.reset_pos()
 
-    def advance_move_transition(self, delta_time: float) -> None:
+    def advance_move_transition(self, delta_time: float, view_manager: arcade.Window) -> None:
         cur = arcade.Vec2(self.center_x, self.center_y)
         delta = (self.target - self.start) * delta_time / self.move_transition_length_in_seconds
 
         if cur.distance(self.target) < delta.length():
-            self.end_move_transition()
+            self.end_move_transition(view_manager)
         else:
             self.center_x += delta.x
             self.center_y += delta.y
 
-    def end_move_transition(self) -> None:
+    def end_move_transition(self, view_manager: arcade.Window) -> None:
         self.reset_pos()
         self.moving = False
-        self.just_finished_moving = not self.just_finished_moving
+        self.just_finished_moving = True
 
-    def capture(self, board: list[list["Piece | None"]], move: PiecePos):
-        assert(victim := board[move.rank][move.file])
-        victim.remove_from_sprite_lists()
-        board[move.rank][move.file] = None
+    def fully_end_move_transition(self) -> None:
+        self.just_finished_moving = False
+
+    def capture(self, move: PiecePos):
+        self.move_packet.capture = move
+        self.board.kill_piece(move)
 
     def reset_pos(self) -> None:
         self.center_x, self.center_y = int((self.piece_pos.file + 0.5) * PIECE_SIZE), int((self.piece_pos.rank + 0.5) * PIECE_SIZE)
@@ -145,17 +157,15 @@ class Piece(arcade.Sprite):
         for capture in self.captures:
             self.draw_capture(capture)
 
+        if self.board.inverted:
+            self.center_x, self.center_y = SCREEN_SIZE - self.center_x, SCREEN_SIZE - self.center_y
+
         sprite_list: arcade.SpriteList[Piece] = arcade.SpriteList()
         sprite_list.append(self)
         sprite_list.draw(pixelated=True)
 
-    @staticmethod
-    def draw_move(move: PiecePos):
-        arcade.draw_circle_filled((move.file + 0.5) * PIECE_SIZE, (move.rank + 0.5) * PIECE_SIZE, PIECE_SIZE // 8, (0, 0, 0, 128))
-
-    @staticmethod
-    def draw_capture(move: PiecePos):
-        arcade.draw_circle_outline((move.file + 0.5) * PIECE_SIZE, (move.rank + 0.5) * PIECE_SIZE, PIECE_SIZE // 2, (0, 0, 0, 128), PIECE_SCALE * 2)
+        if self.board.inverted:
+            self.center_x, self.center_y = SCREEN_SIZE - self.center_x, SCREEN_SIZE - self.center_y
 
     def has_type(self, piece_type: PieceType) -> bool:
         return self.piece_type == piece_type
@@ -165,3 +175,15 @@ class Piece(arcade.Sprite):
 
     def is_enemy(self, other: "Piece"):
         return self.piece_color != other.piece_color
+
+    def draw_move(self, move: PiecePos):
+        if self.board.inverted:
+            move = PiecePos(BOARD_SIZE - 1, BOARD_SIZE - 1) - move
+
+        arcade.draw_circle_filled((move.file + 0.5) * PIECE_SIZE, (move.rank + 0.5) * PIECE_SIZE, PIECE_SIZE // 8, (0, 0, 0, 128))
+
+    def draw_capture(self, capture: PiecePos):
+        if self.board.inverted:
+            capture = PiecePos(BOARD_SIZE - 1, BOARD_SIZE - 1) - capture
+
+        arcade.draw_circle_outline((capture.file + 0.5) * PIECE_SIZE, (capture.rank + 0.5) * PIECE_SIZE, PIECE_SIZE // 2, (0, 0, 0, 128), PIECE_SCALE * 2)
