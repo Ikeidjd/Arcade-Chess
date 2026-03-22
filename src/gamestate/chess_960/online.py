@@ -1,8 +1,7 @@
 from typing import Any
-from PodSixNet.Connection import ConnectionListener, connection
-from board import Board
-from gamestate.chess_normal.online import ChessNormalOnlineView
+from PodSixNet.Connection import connection
 from piece.type import PieceColor
+from gamestate.chess_normal.online import ChessNormalOnlineView
 from .main import Chess960MainView
 
 

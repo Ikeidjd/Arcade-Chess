@@ -29,7 +29,7 @@ class Piece(arcade.Sprite):
         self.moves: set[PiecePos] = set()
         self.captures: set[PiecePos] = set()
 
-        self.move_packet = MovePacket(self.piece_color)
+        self.move_packet: MovePacket = MovePacket(self.piece_color)
 
         self.moving: bool = False
         self.just_finished_moving: bool = False
@@ -144,7 +144,10 @@ class Piece(arcade.Sprite):
         self.just_finished_moving = False
 
     def capture(self, move: PiecePos):
-        self.move_packet.capture = move
+        if self.move_packet.captures is None:
+            self.move_packet.captures = []
+
+        self.move_packet.captures.append(move)
         self.board.kill_piece(move)
 
     def reset_pos(self) -> None:

@@ -132,8 +132,9 @@ class ChessNormalOnlineView(ChessNormalMainView, ConnectionListener):
                 self.swap_turn()
                 self.gen_moves()
         elif self.move_packet:
-            if self.move_packet.capture:
-                self.board.kill_piece(self.move_packet.capture)
+            if self.move_packet.captures:
+                for capture in self.move_packet.captures:
+                    self.board.kill_piece(capture)
 
             for start, end in zip(self.move_packet.start, self.move_packet.end):
                 assert(piece := self.board[start])

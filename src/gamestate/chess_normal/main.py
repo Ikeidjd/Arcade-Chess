@@ -1,6 +1,7 @@
 import arcade
 from constants import SCREEN_SIZE
 from board import Board
+from gamestate.menu.main import MenuMainView
 from piece.piece import Piece, PieceColor, PiecePos
 
 
@@ -74,13 +75,15 @@ class ChessNormalMainView(arcade.View):
 
         if self.selected:
             self.board.color_tile(self.selected.piece_pos, self.move_tile_colors[0])
-            self.selected.draw_as_selected()
 
         if self.last_move:
             self.board.color_tile(self.last_move[0], self.move_tile_colors[0])
             self.board.color_tile(self.last_move[1], self.move_tile_colors[1])
 
         self.board.draw_pieces()
+
+        if self.selected:
+            self.selected.draw_as_selected()
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
         if button != arcade.MOUSE_BUTTON_LEFT or self.selected and self.selected.moving:
@@ -128,3 +131,7 @@ class ChessNormalMainView(arcade.View):
 
         if self.board.inverted:
             self.mouse_x, self.mouse_y = SCREEN_SIZE - self.mouse_x, SCREEN_SIZE - self.mouse_y
+
+    def on_key_release(self, symbol: int, modifiers: int) -> None:
+        if symbol == arcade.key.ESCAPE:
+            self.window.show_view(MenuMainView())
