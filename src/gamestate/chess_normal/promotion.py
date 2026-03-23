@@ -1,27 +1,27 @@
 import arcade
 from constants import PIECE_SIZE, BOARD_SIZE, SCREEN_SIZE
-from gamestate.chess_normal.main import ChessNormalMainView
-from gamestate.chess_normal.move_packet import MovePacket
+from board import Board
 from piece.piece import Piece
 from piece.type import PieceType, PieceColor, PiecePos
+from gamestate.chess_normal.main import ChessNormalMainView
+from gamestate.chess_normal.move_packet import MovePacket
 
 
-class ChessNormalPromotionView(arcade.View):
-    def __init__(self, prev_view: arcade.View, piece_color: PieceColor, piece_pos: PiecePos, forward_dir: PiecePos, move_packet: MovePacket) -> None:
+class PawnPromotionView(arcade.View):
+    def __init__(self, prev_view: ChessNormalMainView, piece_color: PieceColor, piece_pos: PiecePos, forward_dir: PiecePos, move_packet: MovePacket) -> None:
         super().__init__()
-        assert(isinstance(prev_view, ChessNormalMainView))
 
         self.prev_view: ChessNormalMainView = prev_view
-        self.board = self.prev_view.board
+        self.board: Board[Piece] = self.prev_view.board
         self.piece_pos: PiecePos = piece_pos
         self.forward_dir: PiecePos = forward_dir
         self.move_packet: MovePacket = move_packet
 
         self.options: arcade.SpriteList[Piece] = arcade.SpriteList()
-        self.options.append(self.board.new_piece_of_type(PieceType.QUEEN, piece_color, piece_pos, append_to_sprite_list=False))
-        self.options.append(self.board.new_piece_of_type(PieceType.ROOK, piece_color, piece_pos - forward_dir, append_to_sprite_list=False))
-        self.options.append(self.board.new_piece_of_type(PieceType.BISHOP, piece_color, piece_pos - forward_dir * 2, append_to_sprite_list=False))
-        self.options.append(self.board.new_piece_of_type(PieceType.KNIGHT, piece_color, piece_pos - forward_dir * 3, append_to_sprite_list=False))
+        self.options.append(self.board.new_piece_of_type(PieceType.QUEEN, piece_color, piece_pos, add_to_board=False, append_to_sprite_list=False))
+        self.options.append(self.board.new_piece_of_type(PieceType.ROOK, piece_color, piece_pos - forward_dir, add_to_board=False, append_to_sprite_list=False))
+        self.options.append(self.board.new_piece_of_type(PieceType.BISHOP, piece_color, piece_pos - forward_dir * 2, add_to_board=False, append_to_sprite_list=False))
+        self.options.append(self.board.new_piece_of_type(PieceType.KNIGHT, piece_color, piece_pos - forward_dir * 3, add_to_board=False, append_to_sprite_list=False))
 
     def on_draw(self) -> None:
         self.clear()

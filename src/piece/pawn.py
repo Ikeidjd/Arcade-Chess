@@ -32,7 +32,8 @@ class Pawn(Piece):
         for dir in self.capture_dirs:
             self.try_add_move(self.piece_pos, dir, allow_move=False)
 
-            if not possible_en_passant_pos:
+            # The en passant position might be occupied by the duck
+            if not possible_en_passant_pos or self.board[possible_en_passant_pos] is not None:
                 continue
 
             move = self.piece_pos + dir
@@ -72,10 +73,10 @@ class Pawn(Piece):
         super().end_move_transition(view_manager)
 
         if self.is_promotion:
-            from gamestate.chess_normal.promotion import ChessNormalPromotionView
+            from gamestate.chess_normal.promotion import PawnPromotionView
             self.remove_from_sprite_lists()
             assert(view_manager.current_view)
-            view_manager.show_view(ChessNormalPromotionView(view_manager.current_view, self.piece_color, self.piece_pos, self.forward_dir, self.move_packet))
+            view_manager.show_view(PawnPromotionView(view_manager.current_view, self.piece_color, self.piece_pos, self.forward_dir, self.move_packet)) # pyright: ignore[reportArgumentType]
 
     def draw_as_selected(self) -> None:
         if self.en_passant_capture:

@@ -13,6 +13,7 @@ class PieceType(Enum):
 class PieceColor(Enum):
     WHITE = auto()
     BLACK = auto()
+    DUCK = auto()
 
 
 class PiecePos:
@@ -36,7 +37,10 @@ class PiecePos:
         return isinstance(other, PiecePos) and self.rank == other.rank and self.file == other.file
 
     def __hash__(self) -> int:
-        return hash((self.rank << 32) & self.file)
+        return hash((self.rank << 32) | self.file)
+
+    def __repr__(self) -> str:
+        return f"PiecePos({self.rank}, {self.file})"
 
 
 piece_type_from_str = {
@@ -71,5 +75,8 @@ piece_sprite_paths = {
         PieceType.ROOK: "res/rook_black.png",
         PieceType.QUEEN: "res/queen_black.png",
         PieceType.KING: "res/king_black.png"
+    },
+    PieceColor.DUCK: {
+        PieceType.PAWN: "res/duck.png"
     }
 }

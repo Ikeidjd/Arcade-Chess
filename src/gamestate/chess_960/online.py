@@ -5,10 +5,9 @@ from gamestate.chess_normal.online import ChessNormalOnlineView
 from .main import Chess960MainView
 
 
-class Chess960OnlineView(Chess960MainView, ChessNormalOnlineView):
+class Chess960OnlineView(ChessNormalOnlineView, Chess960MainView):
     def __init__(self, my_turn_color: PieceColor, is_host: bool, host: str, port: int) -> None:
-        Chess960MainView.__init__(self)
-        ChessNormalOnlineView.__init__(self, my_turn_color, is_host, host, port)
+        super().__init__(my_turn_color, is_host, host, port)
 
     def Network_start_game(self, data: dict[str, Any]) -> None:
         if self.server:

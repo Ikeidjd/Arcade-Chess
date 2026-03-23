@@ -38,12 +38,14 @@ class MenuMainView(MenuView):
 
         from gamestate.chess_normal.main import ChessNormalMainView
         from gamestate.chess_normal.online import ChessNormalOnlineView
+        from gamestate.chess_duck.main import ChessDuckMainView
+        from gamestate.chess_duck.online import ChessDuckOnlineView
         from gamestate.chess_960.main import Chess960MainView
         from gamestate.chess_960.online import Chess960OnlineView
         from gamestate.chess_atomic.main import ChessAtomicMainView
         from gamestate.chess_atomic.online import ChessAtomicOnlineView
 
         button_play_normal.on_click = on_click_play(ChessNormalMainView, ChessNormalOnlineView)
-        # button_play_duck.on_click = on_click_play(ChessDuckMainView, ChessDuckOnlineView)
+        button_play_duck.on_click = on_click_play(ChessDuckMainView, ChessDuckOnlineView)
         button_play_960.on_click = on_click_play(Chess960MainView, Chess960OnlineView)
         button_play_atomic.on_click = on_click_play(ChessAtomicMainView, ChessAtomicOnlineView)

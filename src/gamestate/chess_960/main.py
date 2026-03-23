@@ -8,21 +8,21 @@ from piece.type import PieceColor
 
 # TODO: change castling rules
 class Chess960MainView(ChessNormalMainView):
-    def __init__(self) -> None:
-        ChessNormalMainView.__init__(self, self.randomize_initial_board())
+    def __init__(self, /, flip_perspective_on_turn_swap: bool = True) -> None:
+        super().__init__(self.randomize_initial_board(), flip_perspective_on_turn_swap=flip_perspective_on_turn_swap)
 
     def randomize_initial_board(self) -> list[list[str]]:
         initial_board = deepcopy(self.initial_board)
 
         available_files = list(range(BOARD_SIZE))
 
-        b1 = self.random_file(available_files, 0)
-        b2 = self.random_file(available_files, 1)
+        b1 = self.get_random_file(available_files, 0)
+        b2 = self.get_random_file(available_files, 1)
 
-        n1 = self.random_file(available_files)
-        n2 = self.random_file(available_files)
+        n1 = self.get_random_file(available_files)
+        n2 = self.get_random_file(available_files)
 
-        q = self.random_file(available_files)
+        q = self.get_random_file(available_files)
 
         r1, k, r2 = tuple(available_files)
 
@@ -47,7 +47,7 @@ class Chess960MainView(ChessNormalMainView):
         return initial_board
 
     @staticmethod
-    def random_file(available_files: list[int], parity: int | None = None) -> int:
+    def get_random_file(available_files: list[int], parity: int | None = None) -> int:
         out = random.choice(available_files)
 
         while parity is not None and out % 2 != parity:

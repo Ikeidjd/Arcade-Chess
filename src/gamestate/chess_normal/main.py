@@ -56,19 +56,31 @@ class ChessNormalMainView(arcade.View):
         if self.selected.moving:
             self.selected.advance_move_transition(delta_time, self.window)
         elif self.selected.just_finished_moving:
-            self.selected.fully_end_move_transition()
-            self.selected = None
-            self.swap_turn()
-            self.gen_moves()
+            self.on_fully_ended_move()
         elif self.just_selected:
             self.selected.center_x, self.selected.center_y = self.mouse_x, self.mouse_y
         else:
             self.selected.reset_pos()
 
+        if self.selected and self.selected.just_finished_moving:
+            self.on_just_ended_move()
+
     def gen_moves(self) -> None:
         for piece in self.board.pieces:
             if piece.has_color(self.cur_turn_color):
                 piece.gen_moves(self.future_en_passant_pos, self.can_castle_kingside[self.cur_turn_color], self.can_castle_queenside[self.cur_turn_color])
+
+    def on_just_ended_move(self) -> None:
+        pass
+
+    def on_fully_ended_move(self) -> None:
+        assert(self.selected)
+
+        self.selected.fully_end_move_transition()
+        self.selected = None
+
+        self.swap_turn()
+        self.gen_moves()
 
     def on_draw(self) -> None:
         self.board.draw_background()

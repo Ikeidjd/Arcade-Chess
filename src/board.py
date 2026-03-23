@@ -92,12 +92,6 @@ class Board(Generic[T]):
             for piece in self.pieces:
                 piece.center_x, piece.center_y = SCREEN_SIZE - piece.center_x, SCREEN_SIZE - piece.center_y
 
-    def __getitem__(self, key: PiecePos) -> T | None:
-        return self.data[key.rank][key.file]
-
-    def __setitem__(self, key: PiecePos, value: T | None):
-        self.data[key.rank][key.file] = value
-
     def to_piece_pos(self, x: int, y: int) -> PiecePos:
         if self.inverted:
             x, y = SCREEN_SIZE - x, SCREEN_SIZE - y
@@ -109,6 +103,26 @@ class Board(Generic[T]):
             pos = PiecePos(BOARD_SIZE - 1, BOARD_SIZE - 1) - pos
 
         arcade.draw_lbwh_rectangle_filled(pos.file * PIECE_SIZE, pos.rank * PIECE_SIZE, PIECE_SIZE, PIECE_SIZE, color)
+
+    def __getitem__(self, pos: PiecePos) -> T | None:
+        if not self.is_in_bounds(pos):
+            raise IndexError(f"PiecePos {pos} out of range for board")
+
+        return self.data[pos.rank][pos.file]
+
+    def __setitem__(self, pos: PiecePos, value: T | None):
+        if not self.is_in_bounds(pos):
+            raise IndexError(f"PiecePos {pos} out of range for board")
+
+        self.data[pos.rank][pos.file] = value
+
+    def __repr__(self) -> str:
+        out = "Board("
+
+        for rank in reversed(self.data):
+            out += f"\n    {rank}"
+
+        return out + "\n)"
 
     @staticmethod
     def is_in_bounds(pos: PiecePos) -> bool:

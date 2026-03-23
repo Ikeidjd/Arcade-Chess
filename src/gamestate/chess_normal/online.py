@@ -1,3 +1,4 @@
+import arcade
 from typing import Any
 from PodSixNet.Channel import Channel
 from PodSixNet.Server import Server
@@ -21,9 +22,6 @@ class ClientChannel(Channel):
 
     def Network_move(self, data: dict[str, Any]) -> None:
         self._server.move(data)
-
-    def Network_close(self, data: dict[str, Any]) -> None:
-        self._server.close_all(data)
 
 
 class ServerChannel(Server):
@@ -60,9 +58,9 @@ class ServerChannel(Server):
         else:
             self.black.Send(data)
 
-    def close_all(self, data: dict[str, Any]) -> None:
-        assert(self.white)
-        assert(self.black)
+    def close_all(self) -> None:
+        if not self.white or not self.black:
+            return
 
         self.white.close()
         self.black.close()
@@ -84,7 +82,6 @@ class ChessNormalOnlineView(ChessNormalMainView, ConnectionListener):
         self.port = port
 
         self.my_turn_color: PieceColor = my_turn_color
-        self.move_packet: MovePacket | None = None
 
         self.enemy_pieces_moving: list[Piece] = []
         self.enemy_promotion_piece: tuple[PieceType, PieceColor] | None = None
@@ -107,13 +104,8 @@ class ChessNormalOnlineView(ChessNormalMainView, ConnectionListener):
             return
 
         if self.is_my_turn():
-            if self.selected and self.selected.just_finished_moving:
-                connection.Send({
-                    "action": "move",
-                    "move": self.selected.move_packet.to_dict()
-                })
             ChessNormalMainView.on_update(self, delta_time)
-        elif len(self.enemy_pieces_moving) > 0:
+        elif self.enemy_pieces_moving:
             done = True
 
             for piece in self.enemy_pieces_moving:
@@ -131,20 +123,16 @@ class ChessNormalOnlineView(ChessNormalMainView, ConnectionListener):
                 self.enemy_pieces_moving = []
                 self.swap_turn()
                 self.gen_moves()
-        elif self.move_packet:
-            if self.move_packet.captures:
-                for capture in self.move_packet.captures:
-                    self.board.kill_piece(capture)
 
-            for start, end in zip(self.move_packet.start, self.move_packet.end):
-                assert(piece := self.board[start])
-                piece.move(end)
-                self.enemy_pieces_moving.append(piece)
+    def on_fully_ended_move(self) -> None:
+        assert(self.selected)
 
-            self.future_en_passant_pos = self.move_packet.future_en_passant_pos
-            self.enemy_promotion_piece = self.move_packet.promotion_piece
-            self.last_move = self.move_packet.start[0], self.move_packet.end[0]
-            self.move_packet = None
+        connection.Send({
+            "action": "move",
+            "move": self.selected.move_packet.to_dict()
+        })
+
+        ChessNormalMainView.on_fully_ended_move(self)
 
     def on_draw(self) -> None:
         if self.start_game:
@@ -158,15 +146,33 @@ class ChessNormalOnlineView(ChessNormalMainView, ConnectionListener):
         if self.is_my_turn():
             super().on_mouse_release(x, y, button, modifiers)
 
-    def on_hide_view(self) -> None:
-        connection.Send({"action": "close"})
-        connection.close()
+    def on_key_release(self, symbol: int, modifiers: int) -> None:
+        super().on_key_release(symbol, modifiers)
+
+        if symbol == arcade.key.ESCAPE:
+            if self.server:
+                self.server.close_all()
+
+            connection.close()
 
     def Network(self, data: dict[str, Any]) -> None:
         print(f"Client received {data}")
 
     def Network_move(self, data: dict[str, Any]) -> None:
-        self.move_packet = MovePacket.from_dict(data["move"])
+        move_packet = MovePacket.from_dict(data["move"])
+
+        if move_packet.captures:
+            for capture in move_packet.captures:
+                self.board.kill_piece(capture)
+
+        for start, end in zip(move_packet.start, move_packet.end):
+            assert(piece := self.board[start])
+            piece.move(end)
+            self.enemy_pieces_moving.append(piece)
+
+        self.future_en_passant_pos = move_packet.future_en_passant_pos
+        self.enemy_promotion_piece = move_packet.promotion_piece
+        self.last_move = move_packet.start[0], move_packet.end[0]
 
     def Network_start_game(self, data: dict[str, Any]) -> None:
         self.start_game = True

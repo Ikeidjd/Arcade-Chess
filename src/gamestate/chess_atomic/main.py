@@ -3,11 +3,13 @@ from gamestate.chess_normal.main import ChessNormalMainView
 
 
 class ChessAtomicMainView(ChessNormalMainView):
-    def __init__(self) -> None:
-        ChessNormalMainView.__init__(self)
+    def __init__(self, /, flip_perspective_on_turn_swap: bool = True) -> None:
+        super().__init__(flip_perspective_on_turn_swap=flip_perspective_on_turn_swap)
 
-    def on_update(self, delta_time: float) -> None:
-        if self.selected and self.selected.just_finished_moving and self.selected.move_packet.captures:
+    def on_fully_ended_move(self, /, call_super: bool = True) -> None:
+        assert(self.selected)
+
+        if self.selected.move_packet.captures:
             captures = self.selected.move_packet.captures.copy()
 
             for capture in captures:
@@ -21,4 +23,5 @@ class ChessAtomicMainView(ChessNormalMainView):
                         self.selected.move_packet.captures.append(pos)
                         self.board.kill_piece(pos)
 
-        super().on_update(delta_time)
+        if call_super:
+            super().on_fully_ended_move()

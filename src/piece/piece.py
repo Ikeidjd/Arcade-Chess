@@ -107,8 +107,11 @@ class Piece(arcade.Sprite):
         old_center_x, old_center_y = self.center_x, self.center_y
         self.reset_pos()
 
+        # The first duck move comes from out of bounds
+        if self.board.is_in_bounds(self.piece_pos):
+            self.board[self.piece_pos] = None
+
         self.board[move] = self
-        self.board[self.piece_pos] = None
 
         # Move transition is skipped if the piece was dragged to its target by the mouse
         self.start_move_transition(move, old_center_x != self.center_x or old_center_y != self.center_y)
@@ -153,13 +156,7 @@ class Piece(arcade.Sprite):
     def reset_pos(self) -> None:
         self.center_x, self.center_y = int((self.piece_pos.file + 0.5) * PIECE_SIZE), int((self.piece_pos.rank + 0.5) * PIECE_SIZE)
 
-    def draw_as_selected(self) -> None:
-        for move in self.moves:
-            self.draw_move(move)
-
-        for capture in self.captures:
-            self.draw_capture(capture)
-
+    def draw_as_unselected(self) -> None:
         if self.board.inverted:
             self.center_x, self.center_y = SCREEN_SIZE - self.center_x, SCREEN_SIZE - self.center_y
 
@@ -170,14 +167,26 @@ class Piece(arcade.Sprite):
         if self.board.inverted:
             self.center_x, self.center_y = SCREEN_SIZE - self.center_x, SCREEN_SIZE - self.center_y
 
+    def draw_as_selected(self) -> None:
+        for move in self.moves:
+            self.draw_move(move)
+
+        for capture in self.captures:
+            self.draw_capture(capture)
+
+        self.draw_as_unselected()
+
     def has_type(self, piece_type: PieceType) -> bool:
         return self.piece_type == piece_type
 
     def has_color(self, piece_color: PieceColor) -> bool:
         return self.piece_color == piece_color
 
-    def is_enemy(self, other: "Piece"):
-        return self.piece_color != other.piece_color
+    def is_friend(self, other: "Piece") -> bool:
+        return self.piece_color == other.piece_color or other.piece_color == PieceColor.DUCK
+
+    def is_enemy(self, other: "Piece") -> bool:
+        return not self.is_friend(other)
 
     def draw_move(self, move: PiecePos):
         if self.board.inverted:
@@ -190,3 +199,6 @@ class Piece(arcade.Sprite):
             capture = PiecePos(BOARD_SIZE - 1, BOARD_SIZE - 1) - capture
 
         arcade.draw_circle_outline((capture.file + 0.5) * PIECE_SIZE, (capture.rank + 0.5) * PIECE_SIZE, PIECE_SIZE // 2, (0, 0, 0, 128), PIECE_SCALE * 2)
+
+    def __repr__(self) -> str:
+        return f" {'N' if self.has_type(PieceType.KNIGHT) else self.piece_type.name[0]}{self.piece_color.name[0]} "

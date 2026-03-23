@@ -1,6 +1,7 @@
 .venv
 .vscode
 build
+dist
 main.spec
 *__pycache__
 *.egg-info
