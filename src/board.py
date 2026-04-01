@@ -86,10 +86,12 @@ class Board(Generic[T]):
         self[pos] = None
         victim.remove_from_sprite_lists()
 
-        victim.piece_pos = PiecePos(-2, -2)
+        """
+        victim.piece_pos = PiecePos.out_of_bounds()
         victim.position = 0, 0
         victim.multiply_scale(0.5)
         self.captured_pieces.append(victim)
+        """
 
     def add_marker(self, pos: PiecePos, type: MarkerPieceType) -> None:
         self.new_markers[pos] = type

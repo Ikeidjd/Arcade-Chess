@@ -1,3 +1,5 @@
+from typing import Iterator
+
 import arcade
 from .type import PieceType, PieceColor, MarkerPieceType, PiecePos
 from .piece import Piece
@@ -5,15 +7,18 @@ from board import Board
 
 
 class Pawn(Piece):
-    PROMOTION_RANKS = {
+    PROMOTION_RANKS: dict[PieceColor, int] = {
         PieceColor.WHITE: 7,
         PieceColor.BLACK: 0
     }
 
+    INITIAL_RANKS: dict[PieceColor, int] = {
+        PieceColor.WHITE: 1,
+        PieceColor.BLACK: 6
+    }
+
     def __init__(self, piece_color: PieceColor, piece_pos: PiecePos, board: Board[Piece]) -> None:
         super().__init__(PieceType.PAWN, piece_color, piece_pos, board, symmetric_dirs=False)
-
-        self.start_pos: PiecePos = self.piece_pos
 
         self.forward_dir: PiecePos = PiecePos(1, 0) if self.has_color(PieceColor.WHITE) else PiecePos(-1, 0)
         self.capture_dirs: set[PiecePos] = {PiecePos(1, -1), PiecePos(1, 1)} if self.has_color(PieceColor.WHITE) else {PiecePos(-1, -1), PiecePos(-1, 1)}
@@ -21,10 +26,16 @@ class Pawn(Piece):
         self.en_passant: PiecePos | None = None
         self.is_promotion: bool = False
 
+    def remove_move(self, move: PiecePos) -> None:
+        super().remove_move(move)
+
+        if self.en_passant == move:
+            self.en_passant = None
+
     def gen_moves(self, can_castle_kingside: bool, can_castle_queenside: bool):
         super().gen_moves(can_castle_kingside, can_castle_queenside)
 
-        if self.try_add_move(self.piece_pos, self.forward_dir, allow_capture=False) and self.piece_pos.rank == self.start_pos.rank:
+        if self.try_add_move(self.piece_pos, self.forward_dir, allow_capture=False) and self.piece_pos.rank == self.INITIAL_RANKS[self.piece_color]:
             self.try_add_move(self.piece_pos + self.forward_dir, self.forward_dir, allow_capture=False)
 
         for dir in self.capture_dirs:
@@ -41,6 +52,19 @@ class Pawn(Piece):
         super().clear_moves()
         self.en_passant = None
         self.is_promotion = False
+
+    def simulate_moves(self) -> Iterator[PiecePos]:
+        for move in super().simulate_moves():
+            yield move
+
+        if self.en_passant:
+            simulated_move1 = self.do_simulate_move(self.en_passant - self.forward_dir)
+            simulated_move2 = self.do_simulate_move(self.en_passant)
+
+            yield self.en_passant
+
+            self.undo_simulate_move(simulated_move2)
+            self.undo_simulate_move(simulated_move1)
 
     def try_move(self, move: PiecePos) -> Piece.MoveResult:
         future_en_passant_pos = None

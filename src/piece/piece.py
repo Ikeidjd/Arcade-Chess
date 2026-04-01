@@ -112,7 +112,7 @@ class Piece(arcade.Sprite):
 
         old_piece = self.board[move]
         if old_piece:
-            old_piece.piece_pos = PiecePos(-2, -2)
+            old_piece.piece_pos = PiecePos.out_of_bounds()
 
         self.board[my_piece_pos] = None
         self.board[move] = self

@@ -5,7 +5,7 @@ from gamestate.chess_duck.move_duck import MoveDuckView
 
 
 class ChessDuckMainView(ChessNormalMainView):
-    initial_duck_pos: PiecePos = PiecePos(-1, -1)
+    initial_duck_pos: PiecePos = PiecePos.out_of_bounds()
 
     def __init__(self, *, flip_perspective_on_turn_swap: bool = True) -> None:
         super().__init__(flip_perspective_on_turn_swap=flip_perspective_on_turn_swap)
