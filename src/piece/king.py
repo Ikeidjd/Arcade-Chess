@@ -19,8 +19,8 @@ class King(SingleMovePiece):
         self.kingside_dir: PiecePos = PiecePos(0, 1) if self.has_color(PieceColor.WHITE) else PiecePos(0, -1)
         self.queenside_dir: PiecePos = PiecePos(0, -1) if self.has_color(PieceColor.WHITE) else PiecePos(0, 1)
 
-    def gen_moves(self, possible_en_passant_pos: PiecePos | None, can_castle_kingside: bool, can_castle_queenside: bool) -> None:
-        super().gen_moves(possible_en_passant_pos, can_castle_kingside, can_castle_queenside)
+    def gen_moves(self, can_castle_kingside: bool, can_castle_queenside: bool) -> None:
+        super().gen_moves(can_castle_kingside, can_castle_queenside)
 
         self.castle_kingside, self.kingside_rook = self.try_gen_castle(self.kingside_dir, can_castle_kingside)
         self.castle_queenside, self.queenside_rook = self.try_gen_castle(self.queenside_dir, can_castle_queenside)

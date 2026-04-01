@@ -24,7 +24,6 @@ class PawnPromotionView(arcade.View):
         self.options.append(self.board.new_piece_of_type(PieceType.KNIGHT, piece_color, piece_pos - forward_dir * 3, add_to_board=False, append_to_sprite_list=False))
 
     def on_draw(self) -> None:
-        self.clear()
         self.board.draw_everything()
 
         piece_pos = self.piece_pos

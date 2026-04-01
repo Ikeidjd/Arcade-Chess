@@ -7,7 +7,7 @@ from gamestate.chess_duck.move_duck import MoveDuckView
 class ChessDuckMainView(ChessNormalMainView):
     initial_duck_pos: PiecePos = PiecePos(-1, -1)
 
-    def __init__(self, /, flip_perspective_on_turn_swap: bool = True) -> None:
+    def __init__(self, *, flip_perspective_on_turn_swap: bool = True) -> None:
         super().__init__(flip_perspective_on_turn_swap=flip_perspective_on_turn_swap)
         self.duck: Piece = self.board.new_piece_of_type(PieceType.PAWN, PieceColor.DUCK, self.initial_duck_pos, add_to_board=False)
         self.duck_move_start: PiecePos = self.initial_duck_pos
@@ -34,7 +34,7 @@ class ChessDuckMainView(ChessNormalMainView):
     def on_fully_ended_move(self) -> None:
         self.window.show_view(MoveDuckView(self))
 
-    def on_fully_ended_duck_move(self, /, call_super: bool = True) -> None:
+    def on_fully_ended_duck_move(self, *, call_super: bool = True) -> None:
         assert(self.selected and self.selected.move_packet)
         self.selected.move_packet.end.append(self.duck.piece_pos)
 

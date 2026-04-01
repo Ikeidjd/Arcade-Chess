@@ -8,7 +8,6 @@ class MenuView(arcade.View):
         self.ui_manager: arcade.gui.UIManager = arcade.gui.UIManager()
 
     def on_draw(self) -> None:
-        self.clear()
         self.ui_manager.draw()
 
     def on_show_view(self) -> None:

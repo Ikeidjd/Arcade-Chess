@@ -170,7 +170,6 @@ class ChessNormalOnlineView(ChessNormalMainView, ConnectionListener):
             piece.move(end)
             self.enemy_pieces_moving.append(piece)
 
-        self.future_en_passant_pos = move_packet.future_en_passant_pos
         self.enemy_promotion_piece = move_packet.promotion_piece
         self.last_move = move_packet.start[0], move_packet.end[0]
 

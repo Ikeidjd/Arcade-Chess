@@ -1,4 +1,5 @@
 from enum import Enum, auto
+from dataclasses import dataclass
 
 
 class PieceType(Enum):
@@ -16,10 +17,14 @@ class PieceColor(Enum):
     DUCK = auto()
 
 
+class MarkerPieceType(Enum):
+    EN_PASSANT = auto()
+
+
+@dataclass
 class PiecePos:
-    def __init__(self, rank: int, file: int) -> None:
-        self.rank = rank
-        self.file = file
+    rank: int
+    file: int
 
     def __add__(self, other: "PiecePos") -> "PiecePos":
         return PiecePos(self.rank + other.rank, self.file + other.file)
@@ -59,7 +64,7 @@ piece_color_from_str = {
 }
 
 
-piece_sprite_paths = {
+_piece_sprite_paths = {
     PieceColor.WHITE: {
         PieceType.PAWN: "res/pawn.png",
         PieceType.KNIGHT: "res/knight.png",
@@ -80,3 +85,9 @@ piece_sprite_paths = {
         PieceType.PAWN: "res/duck.png"
     }
 }
+
+def get_piece_sprite_path(piece_type: PieceType, piece_color: PieceColor) -> str:
+    if piece_color not in _piece_sprite_paths.keys() or piece_type not in _piece_sprite_paths[piece_color].keys():
+        return "res/missing_texture.png"
+
+    return _piece_sprite_paths[piece_color][piece_type]

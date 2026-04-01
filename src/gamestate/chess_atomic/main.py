@@ -3,10 +3,10 @@ from gamestate.chess_normal.main import ChessNormalMainView
 
 
 class ChessAtomicMainView(ChessNormalMainView):
-    def __init__(self, /, flip_perspective_on_turn_swap: bool = True) -> None:
+    def __init__(self, *, flip_perspective_on_turn_swap: bool = True) -> None:
         super().__init__(flip_perspective_on_turn_swap=flip_perspective_on_turn_swap)
 
-    def on_fully_ended_move(self, /, call_super: bool = True) -> None:
+    def on_fully_ended_move(self, *, call_super: bool = True) -> None:
         assert(self.selected)
 
         if self.selected.move_packet.captures:

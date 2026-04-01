@@ -5,20 +5,17 @@ from constants import SCREEN_SIZE
 
 class ViewManager(arcade.Window):
     def __init__(self) -> None:
-        super().__init__(SCREEN_SIZE, SCREEN_SIZE)
+        super().__init__(SCREEN_SIZE, SCREEN_SIZE, "Chess")
 
         view = MenuMainView()
         self.show_view(view)
 
         arcade.run()
 
-    def on_update(self, delta_time: float) -> bool | None:
-        return super().on_update(delta_time)
-
-
-def main():
-    ViewManager()
+    def draw(self, dt: float) -> None:
+        self.clear()
+        super().draw(dt)
 
 
 if __name__ == "__main__":
-    main()
+    ViewManager()

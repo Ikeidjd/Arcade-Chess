@@ -1,33 +1,37 @@
 import arcade
-from constants import *
+from typing import Iterator
+from dataclasses import dataclass
+from constants import PIECE_SCALE, PIECE_SIZE, BOARD_SIZE, SCREEN_SIZE
 from gamestate.chess_normal.move_packet import MovePacket
-from .type import *
+import piece.type
+from .type import PieceType, PieceColor, PiecePos
 from board import Board
 
 
 class Piece(arcade.Sprite):
     move_transition_length_in_seconds = 0.125
 
-    def __init__(self, piece_type: PieceType, piece_color: PieceColor, piece_pos: PiecePos, board: Board["Piece"], dirs: set[PiecePos] | None = None, /, symmetric_dirs: bool = True) -> None:
+    def __init__(self, piece_type: PieceType, piece_color: PieceColor, piece_pos: PiecePos, board: Board["Piece"], dirs: set[PiecePos] | None = None, *, symmetric_dirs: bool = True) -> None:
         self.piece_type: PieceType = piece_type
         self.piece_color: PieceColor = piece_color
         self.piece_pos: PiecePos = piece_pos
 
-        super().__init__(piece_sprite_paths[self.piece_color][self.piece_type], PIECE_SCALE)
+        super().__init__(piece.type.get_piece_sprite_path(self.piece_type, self.piece_color), PIECE_SCALE)
         self.reset_pos()
 
         if dirs:
             self.dirs: set[PiecePos] = dirs
         else:
-            self.dirs = set()
+            self.dirs: set[PiecePos] = set()
 
         if symmetric_dirs:
             self.make_dirs_symmetric()
 
-        self.board = board
+        self.board: Board[Piece] = board
 
         self.moves: set[PiecePos] = set()
         self.captures: set[PiecePos] = set()
+        self.illegal_moves: set[PiecePos] = set()
 
         self.move_packet: MovePacket = MovePacket(self.piece_color)
 
@@ -53,7 +57,7 @@ class Piece(arcade.Sprite):
         self.dirs = dirs
 
     # Returns false if a move (not capture) was possible
-    def try_add_move(self, pos: PiecePos, dir: PiecePos, /, allow_move: bool = True, allow_capture: bool = True) -> bool:
+    def try_add_move(self, pos: PiecePos, dir: PiecePos, *, allow_move: bool = True, allow_capture: bool = True) -> bool:
         move = pos + dir
         try:
             piece = self.board[move]
@@ -71,20 +75,73 @@ class Piece(arcade.Sprite):
 
             return False
 
-    def gen_moves(self, possible_en_passant_pos: PiecePos | None, can_castle_kingside: bool, can_castle_queenside: bool) -> None:
+    def add_illegal_move(self, move: PiecePos, *, allow_illegal_moves: bool) -> None:
+        if allow_illegal_moves:
+            self.illegal_moves.add(move)
+        else:
+            self.remove_move(move)
+
+    def remove_move(self, move: PiecePos) -> None:
+        self.moves.discard(move)
+        self.captures.discard(move)
+
+    def gen_moves(self, can_castle_kingside: bool, can_castle_queenside: bool) -> None:
         self.clear_moves()
         self.move_packet = MovePacket(self.piece_color)
 
     def clear_moves(self) -> None:
         self.moves = set()
         self.captures = set()
+        self.illegal_moves = set()
 
+    def simulate_moves(self) -> Iterator[PiecePos]:
+        for move in self.moves.union(self.captures):
+            simulated_move = self.do_simulate_move(move)
+            yield move
+            self.undo_simulate_move(simulated_move)
+
+    @dataclass
+    class SimulatedMove:
+        my_piece_pos: PiecePos
+        move: PiecePos
+        old_piece: "Piece | None"
+
+    def do_simulate_move(self, move: PiecePos) -> SimulatedMove:
+        my_piece_pos = self.piece_pos
+        self.piece_pos = move
+
+        old_piece = self.board[move]
+        if old_piece:
+            old_piece.piece_pos = PiecePos(-2, -2)
+
+        self.board[my_piece_pos] = None
+        self.board[move] = self
+
+        return self.SimulatedMove(my_piece_pos, move, old_piece)
+
+    def undo_simulate_move(self, simulated_move: SimulatedMove) -> None:
+        self.piece_pos = simulated_move.my_piece_pos
+        self.board[self.piece_pos] = self
+
+        if simulated_move.old_piece:
+            self.board[simulated_move.move] = simulated_move.old_piece
+            simulated_move.old_piece.piece_pos = simulated_move.move
+        else:
+            self.board[simulated_move.move] = None
+
+    def gives_check(self) -> bool:
+        for capture in self.captures:
+            assert(victim := self.board[capture])
+            if victim.has_type(PieceType.KING):
+                return True
+
+        return False
+
+    @dataclass
     class MoveResult:
-        def __init__(self, did_move: bool, future_en_passant_pos: PiecePos | None = None, disable_kingside_castle: bool = False, disable_queenside_castle: bool = False) -> None:
-            self.did_move = did_move
-            self.future_en_passant_pos = future_en_passant_pos
-            self.disable_kingside_castle = disable_kingside_castle
-            self.disable_queenside_castle = disable_queenside_castle
+        did_move: bool
+        disable_kingside_castle: bool = False
+        disable_queenside_castle: bool = False
 
     def try_move(self, move: PiecePos) -> MoveResult:
         can_move = move in self.moves
@@ -176,6 +233,30 @@ class Piece(arcade.Sprite):
 
         self.draw_as_unselected()
 
+    def draw_move(self, move: PiecePos) -> None:
+        color = self.move_color(move)
+
+        if self.board.inverted:
+            move = PiecePos(BOARD_SIZE - 1, BOARD_SIZE - 1) - move
+
+        arcade.draw_circle_filled((move.file + 0.5) * PIECE_SIZE, (move.rank + 0.5) * PIECE_SIZE, PIECE_SIZE // 8, color)
+
+    def draw_capture(self, capture: PiecePos) -> None:
+        color = self.move_color(capture)
+
+        if self.board.inverted:
+            capture = PiecePos(BOARD_SIZE - 1, BOARD_SIZE - 1) - capture
+
+        arcade.draw_circle_outline((capture.file + 0.5) * PIECE_SIZE, (capture.rank + 0.5) * PIECE_SIZE, PIECE_SIZE // 2, color, PIECE_SCALE * 2)
+
+    def move_color(self, move: PiecePos) -> arcade.types.Color:
+        color = arcade.types.Color(0, 0, 0, 128)
+
+        if move in self.illegal_moves:
+            color = arcade.types.Color(255, 0, 0)
+
+        return color
+
     def has_type(self, piece_type: PieceType) -> bool:
         return self.piece_type == piece_type
 
@@ -187,18 +268,6 @@ class Piece(arcade.Sprite):
 
     def is_enemy(self, other: "Piece") -> bool:
         return not self.is_friend(other)
-
-    def draw_move(self, move: PiecePos):
-        if self.board.inverted:
-            move = PiecePos(BOARD_SIZE - 1, BOARD_SIZE - 1) - move
-
-        arcade.draw_circle_filled((move.file + 0.5) * PIECE_SIZE, (move.rank + 0.5) * PIECE_SIZE, PIECE_SIZE // 8, (0, 0, 0, 128))
-
-    def draw_capture(self, capture: PiecePos):
-        if self.board.inverted:
-            capture = PiecePos(BOARD_SIZE - 1, BOARD_SIZE - 1) - capture
-
-        arcade.draw_circle_outline((capture.file + 0.5) * PIECE_SIZE, (capture.rank + 0.5) * PIECE_SIZE, PIECE_SIZE // 2, (0, 0, 0, 128), PIECE_SCALE * 2)
 
     def __repr__(self) -> str:
         return f" {'N' if self.has_type(PieceType.KNIGHT) else self.piece_type.name[0]}{self.piece_color.name[0]} "

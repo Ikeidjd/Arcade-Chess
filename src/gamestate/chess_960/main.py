@@ -8,7 +8,7 @@ from piece.type import PieceColor
 
 # TODO: change castling rules
 class Chess960MainView(ChessNormalMainView):
-    def __init__(self, /, flip_perspective_on_turn_swap: bool = True) -> None:
+    def __init__(self, *, flip_perspective_on_turn_swap: bool = True) -> None:
         super().__init__(self.randomize_initial_board(), flip_perspective_on_turn_swap=flip_perspective_on_turn_swap)
 
     def randomize_initial_board(self) -> list[list[str]]:
