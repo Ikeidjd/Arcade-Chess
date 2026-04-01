@@ -5,12 +5,12 @@ from piece.type import PieceType, PieceColor, PiecePos, MarkerPieceType
 
 class MovePacket:
     def __init__(self, src_color: PieceColor, start: list[PiecePos] | None = None, end: list[PiecePos] | None = None,
-                 captures: list[PiecePos] | None = None, added_markers: list[tuple[MarkerPieceType, PiecePos]] | None = None, promotion_piece: tuple[PieceType, PieceColor] | None = None) -> None:
+                 captures: list[PiecePos] | None = None, added_markers: list[tuple[PiecePos, MarkerPieceType]] | None = None, promotion_piece: tuple[PieceType, PieceColor] | None = None) -> None:
         self.src_color: PieceColor = src_color
         self.start: list[PiecePos] = [] if start is None else start
         self.end: list[PiecePos] = [] if end is None else end
         self.captures: list[PiecePos] = [] if captures is None else captures
-        self.added_markers: list[tuple[MarkerPieceType, PiecePos]] = [] if added_markers is None else added_markers
+        self.added_markers: list[tuple[PiecePos, MarkerPieceType]] = [] if added_markers is None else added_markers
         self.promotion_piece: tuple[PieceType, PieceColor] | None = promotion_piece
 
     def to_dict(self) -> dict[str, Any]:
@@ -19,7 +19,7 @@ class MovePacket:
             "start": [astuple(pos) for pos in self.start],
             "end": [astuple(pos) for pos in self.end],
             "captures": [astuple(pos) for pos in self.captures],
-            "added_markers": [(type.value, astuple(pos)) for type, pos in self.added_markers],
+            "added_markers": [(astuple(pos), type.value) for pos, type in self.added_markers],
             "promotion_piece": self.promotion_piece if self.promotion_piece is None else (self.promotion_piece[0].value, self.promotion_piece[1].value)
         }
 
@@ -30,6 +30,6 @@ class MovePacket:
             [PiecePos(rank, file) for rank, file in data["start"]],
             [PiecePos(rank, file) for rank, file in data["end"]],
             [PiecePos(rank, file) for rank, file in data["captures"]],
-            [(MarkerPieceType(type), PiecePos(rank, file)) for type, (rank, file) in data["added_markers"]],
+            [(PiecePos(rank, file), MarkerPieceType(type)) for (rank, file), type in data["added_markers"]],
             data["promotion_piece"] if data["promotion_piece"] is None else (PieceType(data["promotion_piece"][0]), PieceColor(data["promotion_piece"][1]))
         )

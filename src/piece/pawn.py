@@ -56,7 +56,7 @@ class Pawn(Piece):
                 self.is_promotion = True
             elif future_en_passant_pos:
                 self.board.add_marker(future_en_passant_pos, MarkerPieceType.EN_PASSANT)
-                self.move_packet.added_markers.append((MarkerPieceType.EN_PASSANT, future_en_passant_pos))
+                self.move_packet.added_markers.append((future_en_passant_pos, MarkerPieceType.EN_PASSANT))
 
             return move_result
 

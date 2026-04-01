@@ -121,6 +121,8 @@ class ChessNormalOnlineView(ChessNormalMainView, ConnectionListener):
                     self.board.new_piece_of_type(*self.enemy_promotion_piece, self.enemy_pieces_moving[0].piece_pos)
 
                 self.enemy_pieces_moving = []
+
+                self.board.advance_markers()
                 self.swap_turn()
                 self.gen_moves()
 
@@ -161,9 +163,11 @@ class ChessNormalOnlineView(ChessNormalMainView, ConnectionListener):
     def Network_move(self, data: dict[str, Any]) -> None:
         move_packet = MovePacket.from_dict(data["move"])
 
-        if move_packet.captures:
-            for capture in move_packet.captures:
-                self.board.kill_piece(capture)
+        for marker in move_packet.added_markers:
+            self.board.add_marker(*marker)
+
+        for capture in move_packet.captures:
+            self.board.kill_piece(capture)
 
         for start, end in zip(move_packet.start, move_packet.end):
             assert(piece := self.board[start])
