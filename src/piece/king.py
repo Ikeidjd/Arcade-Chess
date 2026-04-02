@@ -1,3 +1,5 @@
+from typing import Iterator
+
 import arcade
 from enum import Enum, auto
 from piece.piece import Piece
@@ -57,6 +59,14 @@ class King(SingleMovePiece):
         }
 
         self.move_transition_rook: Rook | None = None
+
+    def remove_move(self, move: PiecePos) -> None:
+        super().remove_move(move)
+
+        if move == self.castle_moves[CastleType.KINGSIDE]:
+            self.castle_moves[CastleType.KINGSIDE] = None
+        elif move == self.castle_moves[CastleType.QUEENSIDE]:
+            self.castle_moves[CastleType.QUEENSIDE] = None
 
     def gen_moves(self) -> None:
         super().gen_moves()
@@ -128,6 +138,42 @@ class King(SingleMovePiece):
         self.castle_rooks[CastleType.QUEENSIDE] = None
 
         self.move_transition_rook = None
+
+    def simulate_moves(self) -> Iterator[PiecePos]:
+        for move in super().simulate_moves():
+            yield move
+
+        for move in self.simulate_castle(CastleType.KINGSIDE):
+            yield move
+
+        for move in self.simulate_castle(CastleType.QUEENSIDE):
+            yield move
+
+    def simulate_castle(self, castle_type: CastleType) -> Iterator[PiecePos]:
+        if (move := self.castle_moves[castle_type]) is None:
+            return
+
+        assert(rook := self.castle_rooks[castle_type])
+
+        self.board[rook.piece_pos] = None
+        rook_pos = rook.piece_pos
+        rook.piece_pos = PiecePos.out_of_bounds()
+
+        dir = (move - self.piece_pos).normalize()
+        pos = self.piece_pos
+
+        while True:
+            simulated_move = self.do_simulate_move(pos)
+            yield move
+            self.undo_simulate_move(simulated_move)
+
+            if pos == move:
+                break
+
+            pos += dir
+
+        rook.piece_pos = rook_pos
+        self.board[rook.piece_pos] = rook
 
     def try_move(self, move: PiecePos) -> bool:
         if super().try_move(move) or self.try_move_castle(move, CastleType.KINGSIDE) or self.try_move_castle(move, CastleType.QUEENSIDE):

@@ -65,9 +65,9 @@ class PiecePos:
     def __repr__(self) -> str:
         return f"PiecePos({self.rank}, {self.file})"
 
-    @staticmethod
-    def out_of_bounds() -> "PiecePos":
-        return PiecePos(-2, -2)
+    @classmethod
+    def out_of_bounds(cls) -> "PiecePos":
+        return cls(-2, -2)
 
 
 piece_type_from_str = {
