@@ -32,8 +32,8 @@ class Pawn(Piece):
         if self.en_passant == move:
             self.en_passant = None
 
-    def gen_moves(self, can_castle_kingside: bool, can_castle_queenside: bool):
-        super().gen_moves(can_castle_kingside, can_castle_queenside)
+    def gen_moves(self):
+        super().gen_moves()
 
         if self.try_add_move(self.piece_pos, self.forward_dir, allow_capture=False) and self.piece_pos.rank == self.INITIAL_RANKS[self.piece_color]:
             self.try_add_move(self.piece_pos + self.forward_dir, self.forward_dir, allow_capture=False)
@@ -66,30 +66,29 @@ class Pawn(Piece):
             self.undo_simulate_move(simulated_move2)
             self.undo_simulate_move(simulated_move1)
 
-    def try_move(self, move: PiecePos) -> Piece.MoveResult:
+    def try_move(self, move: PiecePos) -> bool:
         future_en_passant_pos = None
 
         # Double pawn move adds en passant marker. This has to be checked before super().try_move(board, move) because that method changes self.piece_pos
         if move == self.piece_pos + self.forward_dir * 2:
             future_en_passant_pos = self.piece_pos + self.forward_dir
 
-        move_result = super().try_move(move)
-
-        if move_result.did_move:
+        if super().try_move(move):
             if move.rank == self.PROMOTION_RANKS[self.piece_color]:
                 self.is_promotion = True
             elif future_en_passant_pos:
                 self.board.add_marker(future_en_passant_pos, MarkerPieceType.EN_PASSANT)
                 self.move_packet.added_markers.append((future_en_passant_pos, MarkerPieceType.EN_PASSANT))
 
-            return move_result
+            return True
 
         if self.en_passant and move == self.en_passant:
             self.capture(self.en_passant - self.forward_dir)
             self.move(self.en_passant)
-            return self.MoveResult(True)
 
-        return self.MoveResult(False)
+            return True
+
+        return False
 
     def end_move_transition(self, view_manager: arcade.Window) -> None:
         super().end_move_transition(view_manager)

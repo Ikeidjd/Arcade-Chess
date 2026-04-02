@@ -85,7 +85,7 @@ class Piece(arcade.Sprite):
         self.moves.discard(move)
         self.captures.discard(move)
 
-    def gen_moves(self, can_castle_kingside: bool, can_castle_queenside: bool) -> None:
+    def gen_moves(self) -> None:
         self.clear_moves()
         self.move_packet = MovePacket(self.piece_color)
 
@@ -137,13 +137,7 @@ class Piece(arcade.Sprite):
 
         return False
 
-    @dataclass
-    class MoveResult:
-        did_move: bool
-        disable_kingside_castle: bool = False
-        disable_queenside_castle: bool = False
-
-    def try_move(self, move: PiecePos) -> MoveResult:
+    def try_move(self, move: PiecePos) -> bool:
         can_move = move in self.moves
         can_capture = move in self.captures
 
@@ -153,9 +147,9 @@ class Piece(arcade.Sprite):
 
             self.move(move)
 
-            return self.MoveResult(True)
+            return True
 
-        return self.MoveResult(False)
+        return False
 
     def move(self, move: PiecePos) -> None:
         self.move_packet.start.append(self.piece_pos)

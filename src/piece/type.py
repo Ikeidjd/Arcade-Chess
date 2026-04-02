@@ -21,10 +21,31 @@ class MarkerPieceType(Enum):
     EN_PASSANT = auto()
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
 class PiecePos:
     rank: int
     file: int
+
+    def copy(self) -> "PiecePos":
+        return PiecePos(self.rank, self.file)
+
+    def normalize(self) -> "PiecePos":
+        out = self.copy()
+
+        if out.rank > 0:
+            out.rank = 1
+        elif out.rank < 0:
+            out.rank = -1
+
+        if out.file > 0:
+            out.file = 1
+        elif out.file < 0:
+            out.file = -1
+
+        return out
+
+    def manhattan_distance(self, other: "PiecePos") -> int:
+        return abs(self.rank - other.rank) + abs(self.file - other.file)
 
     def __add__(self, other: "PiecePos") -> "PiecePos":
         return PiecePos(self.rank + other.rank, self.file + other.file)
@@ -40,9 +61,6 @@ class PiecePos:
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, PiecePos) and self.rank == other.rank and self.file == other.file
-
-    def __hash__(self) -> int:
-        return hash((self.rank << 32) | self.file)
 
     def __repr__(self) -> str:
         return f"PiecePos({self.rank}, {self.file})"

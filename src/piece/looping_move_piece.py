@@ -7,8 +7,8 @@ class LoopingMovePiece(Piece):
     def __init__(self, piece_type: PieceType, piece_color: PieceColor, piece_pos: PiecePos, board: Board[Piece], dirs: set[PiecePos]) -> None:
         super().__init__(piece_type, piece_color, piece_pos, board, dirs)
 
-    def gen_moves(self, can_castle_kingside: bool, can_castle_queenside: bool) -> None:
-        super().gen_moves(can_castle_kingside, can_castle_queenside)
+    def gen_moves(self) -> None:
+        super().gen_moves()
 
         for dir in self.dirs:
             pos = self.piece_pos

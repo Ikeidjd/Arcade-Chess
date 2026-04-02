@@ -1,5 +1,5 @@
 import arcade
-from constants import SCREEN_SIZE, BOARD_SIZE
+from constants import SCREEN_SIZE
 from board import Board
 from gamestate.menu.main import MenuMainView
 from piece.piece import Piece, PieceColor, PiecePos
@@ -33,16 +33,6 @@ class ChessNormalMainView(arcade.View):
         self.selected: Piece | None = None
         self.just_selected: bool = False
 
-        self.can_castle_kingside: dict[PieceColor, bool] = {
-            PieceColor.WHITE: True,
-            PieceColor.BLACK: True
-        }
-
-        self.can_castle_queenside: dict[PieceColor, bool] = {
-            PieceColor.WHITE: True,
-            PieceColor.BLACK: True
-        }
-
         self.gen_moves()
 
         self.mouse_x: int = 0
@@ -69,7 +59,7 @@ class ChessNormalMainView(arcade.View):
     def gen_moves(self) -> None:
         for piece in self.board.pieces:
             if piece.has_color(self.cur_turn_color):
-                piece.gen_moves(self.can_castle_kingside[self.cur_turn_color], self.can_castle_queenside[self.cur_turn_color])
+                piece.gen_moves()
 
                 for move in piece.simulate_moves():
                     if self.is_in_check():
@@ -80,7 +70,7 @@ class ChessNormalMainView(arcade.View):
 
         for piece in self.board.pieces:
             if piece.has_color(self.cur_turn_color):
-                piece.gen_moves(self.can_castle_kingside[self.cur_turn_color], self.can_castle_queenside[self.cur_turn_color])
+                piece.gen_moves()
 
                 if piece.gives_check():
                     self.half_swap_turn()
@@ -150,15 +140,8 @@ class ChessNormalMainView(arcade.View):
             return
 
         move = self.board.to_piece_pos(x, y)
-        move_result = self.selected.try_move(move)
 
-        if move_result.did_move:
-            if move_result.disable_kingside_castle:
-                self.can_castle_kingside[self.cur_turn_color] = False
-
-            if move_result.disable_queenside_castle:
-                self.can_castle_queenside[self.cur_turn_color] = False
-
+        if self.selected.try_move(move):
             self.last_move = (self.selected_pos, move)
         elif not self.just_selected:
             self.selected.reset_pos()
