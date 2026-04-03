@@ -1,10 +1,9 @@
-from typing import Iterator
-
 import arcade
+from typing import Iterator
 from enum import Enum, auto
 from piece.piece import Piece
 from piece.rook import Rook
-from piece.type import PieceType, PieceColor, PiecePos
+from piece.type import PieceType, PieceColor, MarkerPieceType, PiecePos
 from .single_move_piece import SingleMovePiece
 from board import Board
 
@@ -124,8 +123,6 @@ class King(SingleMovePiece):
         while pos != target and self.board[pos] is None:
             pos += dir
 
-        if self.has_color(PieceColor.WHITE):
-            print(start, target, pos, dir)
         return pos == target and self.board[pos] is None
 
     def clear_moves(self) -> None:
@@ -191,6 +188,14 @@ class King(SingleMovePiece):
 
         if castle_move and move == castle_move:
             assert(castle_rook)
+
+            dir = (castle_target_king - self.piece_pos).normalize()
+            pos = self.piece_pos
+
+            while pos != castle_target_king:
+                self.board.add_marker(pos, MarkerPieceType.EN_PASSANT_CASTLE)
+                self.move_packet.added_markers.append((pos, MarkerPieceType.EN_PASSANT_CASTLE))
+                pos += dir
 
             self.move(castle_target_king)
 

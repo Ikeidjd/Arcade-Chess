@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from constants import PIECE_SCALE, PIECE_SIZE, BOARD_SIZE, SCREEN_SIZE
 from gamestate.chess_normal.move_packet import MovePacket
 import piece.type
-from .type import PieceType, PieceColor, PiecePos
+from .type import PieceType, PieceColor, MarkerPieceType, PiecePos
 from board import Board
 
 
@@ -56,7 +56,7 @@ class Piece(arcade.Sprite):
 
         self.dirs = dirs
 
-    # Returns false if a move (not capture) was possible
+    # Returns true if a move (not capture) was possible
     def try_add_move(self, pos: PiecePos, dir: PiecePos, *, allow_move: bool = True, allow_capture: bool = True) -> bool:
         move = pos + dir
         try:
@@ -65,9 +65,13 @@ class Piece(arcade.Sprite):
             return False
         else:
             if piece is None:
-                if allow_move:
+                if allow_move and not self.board.has_marker(move, MarkerPieceType.EN_PASSANT_CASTLE):
                     self.moves.add(move)
                     return True
+
+                if allow_capture and self.board.has_marker(move, MarkerPieceType.EN_PASSANT_CASTLE):
+                    self.captures.add(move)
+
                 return False
 
             if allow_capture and self.is_enemy(piece):
@@ -131,8 +135,7 @@ class Piece(arcade.Sprite):
 
     def gives_check(self) -> bool:
         for capture in self.captures:
-            assert(victim := self.board[capture])
-            if victim.has_type(PieceType.KING):
+            if (victim := self.board[capture]) and victim.has_type(PieceType.KING):
                 return True
 
         return False
@@ -197,12 +200,15 @@ class Piece(arcade.Sprite):
     def fully_end_move_transition(self) -> None:
         self.just_finished_moving = False
 
-    def capture(self, move: PiecePos):
-        if self.move_packet.captures is None:
-            self.move_packet.captures = []
+    def capture(self, capture: PiecePos):
+        if self.board[capture]:
+            self.move_packet.captures.append(capture)
+            self.board.kill_piece(capture)
 
-        self.move_packet.captures.append(move)
-        self.board.kill_piece(move)
+        if self.board.has_marker(capture, MarkerPieceType.EN_PASSANT_CASTLE):
+            capture = self.board.get_enemy_king_pos(self.piece_color)
+            self.move_packet.captures.append(capture)
+            self.board.kill_piece(capture)
 
     def reset_pos(self) -> None:
         self.center_x, self.center_y = int((self.piece_pos.file + 0.5) * PIECE_SIZE), int((self.piece_pos.rank + 0.5) * PIECE_SIZE)
@@ -223,6 +229,9 @@ class Piece(arcade.Sprite):
             self.draw_move(move)
 
         for capture in self.captures:
+            if self.board.has_marker(capture, MarkerPieceType.EN_PASSANT_CASTLE):
+                self.board.draw_markers()
+
             self.draw_capture(capture)
 
         self.draw_as_unselected()

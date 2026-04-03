@@ -1,7 +1,7 @@
 import arcade
 from typing import TypeVar, Generic
-from constants import PIECE_SIZE, BOARD_SIZE, SCREEN_SIZE
-from piece.type import PieceType, PieceColor, MarkerPieceType, PiecePos, piece_type_from_str, piece_color_from_str
+from constants import PIECE_SCALE, PIECE_SIZE, BOARD_SIZE, SCREEN_SIZE
+from piece.type import PieceType, PieceColor, MarkerPieceType, PiecePos, piece_type_from_str, piece_color_from_str, marker_sprite_paths
 
 
 # T should only ever be Piece. Making it generic is a workaround to get static type checking without circular imports
@@ -19,6 +19,7 @@ class Board(Generic[T]):
 
         self.old_markers: dict[PiecePos, MarkerPieceType] = {}
         self.new_markers: dict[PiecePos, MarkerPieceType] = {}
+        self.markers_to_draw: arcade.SpriteList[arcade.Sprite] = arcade.SpriteList()
 
         self.captured_pieces: arcade.SpriteList[arcade.Sprite] = arcade.SpriteList()
         self.captured_pieces_camera: arcade.Camera2D = arcade.Camera2D(arcade.LBWH(0, 0, SCREEN_SIZE, SCREEN_SIZE))
@@ -103,6 +104,17 @@ class Board(Generic[T]):
         self.old_markers = self.new_markers
         self.new_markers = {}
 
+        self.markers_to_draw.clear()
+        for pos, marker_type in self.old_markers.items():
+            self.markers_to_draw.append(arcade.Sprite(marker_sprite_paths[marker_type], PIECE_SCALE, int((pos.file + 0.5) * PIECE_SIZE), int((pos.rank + 0.5) * PIECE_SIZE)))
+
+    def get_enemy_king_pos(self, color: PieceColor) -> PiecePos:
+        for piece in self.pieces:
+            if piece.has_type(PieceType.KING) and not piece.has_color(color):
+                return piece.piece_pos
+
+        assert(False)
+
     def draw_everything(self) -> None:
         self.draw_background()
         self.draw_pieces()
@@ -123,6 +135,17 @@ class Board(Generic[T]):
         if self.inverted:
             for piece in self.pieces:
                 piece.center_x, piece.center_y = SCREEN_SIZE - piece.center_x, SCREEN_SIZE - piece.center_y
+
+    def draw_markers(self) -> None:
+        if self.inverted:
+            for marker in self.markers_to_draw:
+                marker.center_x, marker.center_y = SCREEN_SIZE - marker.center_x, SCREEN_SIZE - marker.center_y
+
+        self.markers_to_draw.draw(pixelated=True)
+
+        if self.inverted:
+            for marker in self.markers_to_draw:
+                marker.center_x, marker.center_y = SCREEN_SIZE - marker.center_x, SCREEN_SIZE - marker.center_y
 
     def draw_captured_pieces(self) -> None:
         self.captured_pieces_camera.use()

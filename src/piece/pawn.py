@@ -101,6 +101,7 @@ class Pawn(Piece):
 
     def draw_as_selected(self) -> None:
         if self.en_passant:
+            self.board.draw_markers()
             self.draw_capture(self.en_passant)
 
         super().draw_as_selected()

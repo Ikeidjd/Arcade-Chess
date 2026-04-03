@@ -19,6 +19,7 @@ class PieceColor(Enum):
 
 class MarkerPieceType(Enum):
     EN_PASSANT = auto()
+    EN_PASSANT_CASTLE = auto()
 
 
 @dataclass(unsafe_hash=True)
@@ -108,8 +109,15 @@ _piece_sprite_paths = {
     }
 }
 
+
 def get_piece_sprite_path(piece_type: PieceType, piece_color: PieceColor) -> str:
     if piece_color not in _piece_sprite_paths.keys() or piece_type not in _piece_sprite_paths[piece_color].keys():
         return "res/missing_texture.png"
 
     return _piece_sprite_paths[piece_color][piece_type]
+
+
+marker_sprite_paths = {
+    MarkerPieceType.EN_PASSANT: "res/en_passant_marker.png",
+    MarkerPieceType.EN_PASSANT_CASTLE: "res/en_passant_castle_marker.png"
+}
