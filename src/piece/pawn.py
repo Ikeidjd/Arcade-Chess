@@ -53,6 +53,9 @@ class Pawn(Piece):
         self.en_passant = None
         self.is_promotion = False
 
+    def has_moves(self) -> bool:
+        return super().has_moves() and self.en_passant is None
+
     def simulate_moves(self) -> Iterator[PiecePos]:
         for move in super().simulate_moves():
             yield move

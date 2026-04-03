@@ -23,6 +23,9 @@ class ClientChannel(Channel):
     def Network_move(self, data: dict[str, Any]) -> None:
         self._server.move(data)
 
+    def Network_close(self, data: dict[str, Any]) -> None:
+        self._server.close_all()
+
 
 class ServerChannel(Server):
     channelClass = ClientChannel
@@ -35,13 +38,12 @@ class ServerChannel(Server):
     
     def Connected(self, channel: ClientChannel, addr: Any):
         print(f"{channel} connected")
+
         if self.white is None:
             self.white = channel
         else:
             self.black = channel
-
-            self.white.Send({"action": "start_game"})
-            self.black.Send({"action": "start_game"})
+            self.send_all({"action": "start_game"})
 
     def send_all(self, data: dict[str, Any]) -> None:
         assert(self.white)
@@ -61,6 +63,8 @@ class ServerChannel(Server):
     def close_all(self) -> None:
         if not self.white or not self.black:
             return
+
+        self.send_all({"action": "close"})
 
         self.white.close()
         self.black.close()
@@ -88,17 +92,11 @@ class ChessNormalOnlineView(ChessNormalMainView, ConnectionListener):
 
         self.start_game = False
 
-        self.data: dict[str, Any] | None = None
-
     def is_my_turn(self):
         return self.cur_turn_color == self.my_turn_color
 
     def on_update(self, delta_time: float) -> None:
-        connection.Pump()
-        self.Pump()
-
-        if self.server:
-            self.server.Pump()
+        self.do_pumps()
 
         if not self.start_game:
             return
@@ -154,8 +152,17 @@ class ChessNormalOnlineView(ChessNormalMainView, ConnectionListener):
         if symbol == arcade.key.ESCAPE:
             if self.server:
                 self.server.close_all()
+            else:
+                connection.Send({"action": "close"})
 
-            connection.close()
+            self.do_pumps()
+
+    def do_pumps(self) -> None:
+        connection.Pump()
+        self.Pump()
+
+        if self.server:
+            self.server.Pump()
 
     def Network(self, data: dict[str, Any]) -> None:
         print(f"Client received {data}")
@@ -179,3 +186,6 @@ class ChessNormalOnlineView(ChessNormalMainView, ConnectionListener):
 
     def Network_start_game(self, data: dict[str, Any]) -> None:
         self.start_game = True
+
+    def Network_close(self, data: dict[str, Any]) -> None:
+        connection.close()

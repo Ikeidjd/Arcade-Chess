@@ -136,6 +136,9 @@ class King(SingleMovePiece):
 
         self.move_transition_rook = None
 
+    def has_moves(self) -> bool:
+        return super().has_moves() and self.castle_moves[CastleType.KINGSIDE] is None and self.castle_moves[CastleType.QUEENSIDE] is None
+
     def simulate_moves(self) -> Iterator[PiecePos]:
         for move in super().simulate_moves():
             yield move
@@ -196,6 +199,9 @@ class King(SingleMovePiece):
                 self.board.add_marker(pos, MarkerPieceType.EN_PASSANT_CASTLE)
                 self.move_packet.added_markers.append((pos, MarkerPieceType.EN_PASSANT_CASTLE))
                 pos += dir
+
+            self.board.add_marker(castle_target_rook, MarkerPieceType.EN_PASSANT_CASTLE)
+            self.move_packet.added_markers.append((castle_target_rook, MarkerPieceType.EN_PASSANT_CASTLE))
 
             self.move(castle_target_king)
 

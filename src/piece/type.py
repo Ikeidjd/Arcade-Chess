@@ -12,9 +12,12 @@ class PieceType(Enum):
 
 
 class PieceColor(Enum):
-    WHITE = auto()
-    BLACK = auto()
-    DUCK = auto()
+    WHITE = "white"
+    BLACK = "black"
+    DUCK = "duck"
+
+    def get_enemy_color(self) -> "PieceColor":
+        return PieceColor.WHITE if self == PieceColor.BLACK else PieceColor.BLACK
 
 
 class MarkerPieceType(Enum):

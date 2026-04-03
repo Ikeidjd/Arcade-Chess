@@ -108,12 +108,12 @@ class Board(Generic[T]):
         for pos, marker_type in self.old_markers.items():
             self.markers_to_draw.append(arcade.Sprite(marker_sprite_paths[marker_type], PIECE_SCALE, int((pos.file + 0.5) * PIECE_SIZE), int((pos.rank + 0.5) * PIECE_SIZE)))
 
-    def get_enemy_king_pos(self, color: PieceColor) -> PiecePos:
+    def get_king_pos(self, color: PieceColor) -> PiecePos | None:
         for piece in self.pieces:
-            if piece.has_type(PieceType.KING) and not piece.has_color(color):
+            if piece.has_type(PieceType.KING) and piece.has_color(color):
                 return piece.piece_pos
 
-        assert(False)
+        return None
 
     def draw_everything(self) -> None:
         self.draw_background()

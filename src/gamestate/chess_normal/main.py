@@ -57,6 +57,8 @@ class ChessNormalMainView(arcade.View):
             self.on_just_ended_move()
 
     def gen_moves(self) -> None:
+        has_moves = False
+
         for piece in self.board.pieces:
             if piece.has_color(self.cur_turn_color):
                 piece.gen_moves()
@@ -64,6 +66,19 @@ class ChessNormalMainView(arcade.View):
                 for move in piece.simulate_moves():
                     if self.is_in_check():
                         piece.add_illegal_move(move, allow_illegal_moves=self.allow_illegal_moves)
+
+                has_moves = has_moves or piece.has_moves()
+
+        from .game_over import GameOverType, GameOverView
+        game_over_type = None
+
+        if not has_moves:
+            game_over_type = GameOverType.CHECKMATE if self.is_in_check() else GameOverType.STALEMATE
+        elif self.board.get_king_pos(self.cur_turn_color) is None:
+            game_over_type = GameOverType.KING_CAPTURE
+
+        if game_over_type:
+            self.window.show_view(GameOverView(self.board, game_over_type, self.cur_turn_color.get_enemy_color(), self.cur_turn_color))
 
     def is_in_check(self) -> bool:
         self.half_swap_turn()
@@ -109,7 +124,7 @@ class ChessNormalMainView(arcade.View):
             self.selected.draw_as_selected()
 
     def half_swap_turn(self) -> None:
-        self.cur_turn_color = PieceColor.WHITE if self.cur_turn_color == PieceColor.BLACK else PieceColor.BLACK
+        self.cur_turn_color = self.cur_turn_color.get_enemy_color()
 
     def swap_turn(self) -> None:
         self.half_swap_turn()

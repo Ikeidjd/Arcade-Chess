@@ -98,6 +98,9 @@ class Piece(arcade.Sprite):
         self.captures = set()
         self.illegal_moves = set()
 
+    def has_moves(self) -> bool:
+        return len(self.moves) + len(self.captures) != 0
+
     def simulate_moves(self) -> Iterator[PiecePos]:
         for move in self.moves.union(self.captures):
             simulated_move = self.do_simulate_move(move)
@@ -206,9 +209,9 @@ class Piece(arcade.Sprite):
             self.board.kill_piece(capture)
 
         if self.board.has_marker(capture, MarkerPieceType.EN_PASSANT_CASTLE):
-            capture = self.board.get_enemy_king_pos(self.piece_color)
-            self.move_packet.captures.append(capture)
-            self.board.kill_piece(capture)
+            assert(capture2 := self.board.get_king_pos(self.piece_color.get_enemy_color()))
+            self.move_packet.captures.append(capture2)
+            self.board.kill_piece(capture2)
 
     def reset_pos(self) -> None:
         self.center_x, self.center_y = int((self.piece_pos.file + 0.5) * PIECE_SIZE), int((self.piece_pos.rank + 0.5) * PIECE_SIZE)
